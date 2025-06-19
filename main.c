@@ -30,6 +30,12 @@ typedef struct {
     Nodo* tabla_valor_total[HASH_SIZE];
 } HashMap;
 
+int saldo = 0;
+void cargarDinero();               // 1
+void agregarInsumo();              // 2
+void mostrarBoletinSemanal();     // 3
+void mostrarBoletinMensual();     // 4
+
 // Funciones de hash para valores enteros
 unsigned int hashCantidad(int cantidad) {
     return cantidad % HASH_SIZE;
@@ -63,12 +69,26 @@ unsigned int hashFecha(const char* fecha) {
     return hash_value % HASH_SIZE;
 }
 
+// Función para cargar dinero
+void cargarDinero() {
+    int monto;
+    printf("\nIngrese el monto a cargar: ");
+    scanf("%d", &monto);
 
+    if (monto <= 0) {
+        printf("El monto debe ser mayor que cero.\n");
+        return;
+    }
 
-void cargarDinero();               // 1
-void agregarInsumo();              // 2
-void mostrarBoletinSemanal();     // 3
-void mostrarBoletinMensual();     // 4
+    saldo += monto;
+    printf("Dinero cargado exitosamente. Saldo actual: %d\n", saldo);
+}
+
+// Función para agregar insumo
+void agregarInsumo() {
+    printf("\n[Función agregarInsumo aún no implementada]\n");
+}
+
 
 int main() {
     int opcion;
@@ -106,15 +126,4 @@ int main() {
     } while(opcion != 5);
 
     return 0;
-}
-
-// Función para cargar dinero
-void cargarDinero() {
-    printf("\n[Función cargarDinero aún no implementada]\n");
-    
-}
-
-// Función para agregar insumo
-void agregarInsumo() {
-    printf("\n[Función agregarInsumo aún no implementada]\n");
 }
