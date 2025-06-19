@@ -30,7 +30,16 @@ typedef struct {
     Nodo* tabla_valor_total[HASH_SIZE];
 } HashMap;
 
-// Función de hash simple
+// Funciones de hash para valores enteros
+unsigned int hashCantidad(int cantidad) {
+    return cantidad % HASH_SIZE;
+}
+
+unsigned int hashValorTotal(int valor) {
+    return (valor / 10) % HASH_SIZE;
+}
+
+// Función de hash simple para cadenas de caracteres
 unsigned int hash(const char* clave) {
     unsigned int hash_value = 0;
     while (*clave) {
@@ -39,6 +48,20 @@ unsigned int hash(const char* clave) {
     return hash_value % HASH_SIZE;
 }
 
+unsigned int hashFecha(const char* fecha) {
+    int año, mes, dia;
+    
+    // Asumimos que la fecha está en formato YYYY-MM-DD
+    sscanf(fecha, "%4d-%2d-%2d", &año, &mes, &dia);
+
+    //usamos todos los componentes de la fecha para generar un hash
+    unsigned int hash_value = 0;
+    hash_value = (hash_value * 31) + año;  // Multiplicamos por un número primo
+    hash_value = (hash_value * 31) + mes;
+    hash_value = (hash_value * 31) + dia;
+
+    return hash_value % HASH_SIZE;
+}
 
 
 
