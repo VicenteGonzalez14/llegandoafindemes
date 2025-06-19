@@ -1,10 +1,5 @@
 #include "extra.h"
 
-
-
-
-
-
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
 #define MAX_INSUMOS 100
@@ -195,12 +190,19 @@ void mostrarBoletinMensual() {
     TopInsumo top3[3] = {{"", 0}, {"", 0}, {"", 0}};
     int totalGastado = 0;
 
+    // Matriz para predicción (máx. 6 semanas)
+    int semanaActual = 1;
+    int semanas[6] = {0};
+    int gastosPorSemana[6] = {0};
+    int semanaGastos[6] = {0};
+    int contadorSemanas = 0;
+
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 30)) {
             printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valorTotal);
             totalGastado += insumos[i].valorTotal;
 
-            // Buscar si ya está en top
+            // Top 3
             int encontrado = 0;
             for (int j = 0; j < 3; j++) {
                 if (strcmp(top3[j].categoria, insumos[i].categoria) == 0) {
@@ -209,17 +211,25 @@ void mostrarBoletinMensual() {
                     break;
                 }
             }
-
-            // Si no está, ver si reemplaza alguno
             if (!encontrado) {
                 int minIdx = 0;
                 for (int j = 1; j < 3; j++) {
-                    if (top3[j].gasto < top3[minIdx].gasto) minIdx = j;
+                    if (top3[j].gasto < top3[minIdx].gasto)
+                        minIdx = j;
                 }
                 if (insumos[i].valorTotal > top3[minIdx].gasto) {
                     strcpy(top3[minIdx].categoria, insumos[i].categoria);
                     top3[minIdx].gasto = insumos[i].valorTotal;
                 }
+            }
+
+            // Agrupar gasto semanalmente (muy simple: 7 días por bloque)
+            int diasDesdeHoy = estaEnUltimosNDias(insumos[i].fecha, 30); // Reutiliza días para estimar semana
+            int semana = (30 - diasDesdeHoy) / 7;
+
+            if (semana >= 0 && semana < 6) {
+                gastosPorSemana[semana] += insumos[i].valorTotal;
+                semanaGastos[semana] = 1;
             }
         }
     }
@@ -230,7 +240,103 @@ void mostrarBoletinMensual() {
         if (top3[i].gasto > 0)
             printf("• %s: $%d\n", top3[i].categoria, top3[i].gasto);
     }
+
+    // --- REGRESIÓN LINEAL PREDICTIVA ---
+    // Construir arrays de semanas y gastos
+    int x[6], y[6], n = 0;
+    for (int i = 0; i < 6; i++) {
+        if (semanaGastos[i]) {
+            x[n] = i + 1;
+            y[n] = gastosPorSemana[i];
+            n++;
+        }
+    }
+
+    if (n >= 2) { // se necesita al menos 2 semanas para estimar
+        int sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
+        for (int i = 0; i < n; i++) {
+            sum_x += x[i];
+            sum_y += y[i];
+            sum_xy += x[i] * y[i];
+            sum_x2 += x[i] * x[i];
+        }
+
+        float a = (n * sum_xy - sum_x * sum_y) * 1.0 / (n * sum_x2 - sum_x * sum_x);
+        float b = (sum_y - a * sum_x) / n;
+
+        float prediccion = a * (x[n-1] + 1) + b;
+
+        printf("\nPredicción de gasto para la próxima semana: $%.0f\n", prediccion);
+        if (prediccion > 25000)
+            printf("Advertencia: tu ritmo de gasto es elevado.\n");
+        else
+            printf("Estás gastando a un ritmo moderado.\n");
+    } else {
+        printf("\nNo hay suficientes datos para predecir el gasto semanal.\n");
+    }
 }
+
+
+float predecirGastoSemanal() {
+    // Paso 1: agrupar los gastos semanales
+    int semanasMax = 10;
+    int semanaActual = 0;
+    int gastoSemanal[semanasMax];
+    memset(gastoSemanal, 0, sizeof(gastoSemanal));
+
+    // Obtener la fecha actual
+    time_t t_actual = time(NULL);
+    struct tm *fecha_actual = localtime(&t_actual);
+
+    for (int i = 0; i < totalInsumos; i++) {
+        struct tm fecha = {0};
+        int anio, mes, dia;
+        sscanf(insumos[i].fecha, "%d-%d-%d", &anio, &mes, &dia);
+        fecha.tm_year = anio - 1900;
+        fecha.tm_mon = mes - 1;
+        fecha.tm_mday = dia;
+
+        time_t t_insumo = mktime(&fecha);
+        double dias_diferencia = difftime(t_actual, t_insumo) / (60 * 60 * 24);
+
+        int semana = (int)(dias_diferencia / 7);
+        if (semana < semanasMax)
+            gastoSemanal[semana] += insumos[i].valorTotal;
+
+        if (semana > semanaActual)
+            semanaActual = semana;
+    }
+
+    // Paso 2: preparar datos para regresión lineal
+    int n = 0;
+    float x[semanasMax], y[semanasMax];
+
+    for (int i = 0; i < semanasMax; i++) {
+        if (gastoSemanal[i] > 0) {
+            x[n] = i + 1;  // semana 1, 2, ...
+            y[n] = gastoSemanal[i];
+            n++;
+        }
+    }
+
+    if (n < 2) return -1; // no hay suficientes datos
+
+    // Regresión lineal: y = a*x + b
+    float sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
+    for (int i = 0; i < n; i++) {
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += x[i] * y[i];
+        sum_x2 += x[i] * x[i];
+    }
+
+    float a = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+    float b = (sum_y - a * sum_x) / n;
+
+    float siguiente_semana = x[n - 1] + 1;
+    return a * siguiente_semana + b;
+}
+
 
 // Función para limpiar la pantalla
 void limpiarPantalla() { system("clear"); }

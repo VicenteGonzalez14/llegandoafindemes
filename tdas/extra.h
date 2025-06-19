@@ -18,6 +18,8 @@ extern int totalInsumos;   // cantidad de insumos guardados
         
 void mostrarBoletinSemanal();
 void mostrarBoletinMensual();
+float predecirGastoSemanal();
+
 
 
 
