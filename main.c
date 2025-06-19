@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "tdas/extra.h"
+
 
 void cargarDinero();               // 1
 void agregarInsumo();              // 2
