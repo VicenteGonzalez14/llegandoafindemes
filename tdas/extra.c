@@ -7,6 +7,8 @@
 
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
+#define MAX_INSUMOS 100
+
 
 char **leer_linea_csv(FILE *archivo, char separador) {
     static char linea[MAX_LINE_LENGTH];
@@ -65,6 +67,39 @@ char **leer_linea_csv(FILE *archivo, char separador) {
     campos[idx] = NULL;
     return campos;
 }
+
+void cargarDatasetDesdeCSV(const char *nombreArchivo) {
+    FILE *archivo = fopen(nombreArchivo, "insumos.csv");
+    if (!archivo) {
+        printf("No se pudo abrir el archivo: %s\n", insumos);
+        return;
+    }
+
+    char **campos;
+    int fila = 0;
+
+    while ((campos = leer_linea_csv(archivo, ',')) != NULL) {
+        if (fila++ == 0) continue;  // Saltar la cabecera
+
+        if (totalInsumos >= MAX_INSUMOS) {
+            printf("Límite de insumos alcanzado.\n");
+            break;
+        }
+
+        strcpy(insumos[totalInsumos].fecha, campos[0]);
+        strcpy(insumos[totalInsumos].categoria, campos[1]);
+        // Aquí podrías guardar el nombre del producto si agregas un campo en `Insumo`
+        // strcpy(insumos[totalInsumos].producto, campos[2]); 
+        insumos[totalInsumos].cantidad = atoi(campos[3]);
+        insumos[totalInsumos].valorTotal = atoi(campos[4]);
+
+        totalInsumos++;
+    }
+
+    fclose(archivo);
+    printf("Se cargaron %d insumos desde el archivo.\n", totalInsumos);
+}
+
 
 
 List *split_string(const char *str, const char *delim) {

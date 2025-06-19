@@ -57,13 +57,3 @@ void cargarDinero() {
 void agregarInsumo() {
     printf("\n[Función agregarInsumo aún no implementada]\n");
 }
-
-// Función para mostrar boletín semanal
-void mostrarBoletinSemanal() {
-    printf("\n[Función mostrarBoletinSemanal aún no implementada]\n");
-}
-
-// Función para mostrar boletín mensual
-void mostrarBoletinMensual() {
-    printf("\n[Función mostrarBoletinMensual aún no implementada]\n");
-}

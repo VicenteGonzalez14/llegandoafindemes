@@ -30,4 +30,7 @@ void limpiarPantalla();
 
 void presioneTeclaParaContinuar();
 
+void cargarDatasetDesdeCSV(const char *nombreArchivo);
+
+
 #endif
