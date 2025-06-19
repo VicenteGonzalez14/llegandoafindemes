@@ -5,6 +5,32 @@
 #include "tdas/list.h"
 #include "tdas/list.h"
 
+// Estructura de Insumo
+typedef struct {
+    char fecha[11];    // Fecha en formato YYYY-MM-DD
+    char categoria[20];
+    char producto[20];
+    int cantidad;
+    int valor_total;
+} Insumo;
+
+typedef struct Nodo {
+    Insumo insumo;
+    struct Nodo* siguiente;
+} Nodo;
+
+// Definimos el tipo de lista enlazada
+typedef Nodo* ListaEnlazada;  // Tipo que representa la lista de insumos
+
+// Definimos un tipo para cada mapa: cada mapa almacena una lista de insumos por clave.
+typedef struct { 
+    ListaEnlazada *fecha;      
+    ListaEnlazada *categoria;  
+    ListaEnlazada *producto;   
+    ListaEnlazada *cantidad;  
+    ListaEnlazada *valor_total;
+} MapasInsumos;
+
 
 
 
