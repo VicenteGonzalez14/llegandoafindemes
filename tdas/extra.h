@@ -6,15 +6,8 @@
 #include <string.h>
 #include "list.h"
 
-typedef struct {
-    char categoria[50];
-    int cantidad;
-    int valorTotal;
-    char fecha[11]; // Formato YYYY-MM-DD
-} Insumo;
 
-extern Insumo insumos[];   // arreglo global con los insumos
-extern int totalInsumos;   // cantidad de insumos guardados
+
         
 void mostrarBoletinSemanal();
 void mostrarBoletinMensual();
