@@ -5,9 +5,11 @@
 #include "tdas/list.h"
 #include "tdas/list.h"
 
-// Estructura de Insumo
+#define HASH_SIZE 1000  // Tamaño de la tabla hash
+
+// Estructura de los insumos
 typedef struct {
-    char fecha[11];    // Fecha en formato YYYY-MM-DD
+    char fecha[11];
     char categoria[20];
     char producto[20];
     int cantidad;
@@ -19,17 +21,23 @@ typedef struct Nodo {
     struct Nodo* siguiente;
 } Nodo;
 
-// Definimos el tipo de lista enlazada
-typedef Nodo* ListaEnlazada;  // Tipo que representa la lista de insumos
+// Mapa hash para los insumos (una tabla de listas enlazadas)
+typedef struct {
+    Nodo* tabla_fecha[HASH_SIZE];
+    Nodo* tabla_categoria[HASH_SIZE];
+    Nodo* tabla_producto[HASH_SIZE];
+    Nodo* tabla_cantidad[HASH_SIZE];
+    Nodo* tabla_valor_total[HASH_SIZE];
+} HashMap;
 
-// Definimos un tipo para cada mapa: cada mapa almacena una lista de insumos por clave.
-typedef struct { 
-    ListaEnlazada *fecha;      
-    ListaEnlazada *categoria;  
-    ListaEnlazada *producto;   
-    ListaEnlazada *cantidad;  
-    ListaEnlazada *valor_total;
-} MapasInsumos;
+// Función de hash simple
+unsigned int hash(const char* clave) {
+    unsigned int hash_value = 0;
+    while (*clave) {
+        hash_value = (hash_value * 31) + *clave++;
+    }
+    return hash_value % HASH_SIZE;
+}
 
 
 
