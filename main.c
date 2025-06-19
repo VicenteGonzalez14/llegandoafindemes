@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "tdas/extra.h"
+#include "tdas/list.h"
+#include "tdas/list.h"
+
+
 
 
 void cargarDinero();               // 1
