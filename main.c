@@ -84,9 +84,87 @@ void cargarDinero() {
     printf("Dinero cargado exitosamente. Saldo actual: %d\n", saldo);
 }
 
+// Instancia global del HashMap
+HashMap hashMap;
+
+// Función auxiliar para insertar un insumo en una tabla hash específica
+void insertarEnTabla(Nodo* tabla[], unsigned int (*func_hash)(const void*), const void* clave, Insumo insumo) {
+    unsigned int idx = func_hash(clave);
+    Nodo* nuevoNodo = (Nodo*)malloc(sizeof(Nodo));
+    if (!nuevoNodo) {
+        printf("Error: No se pudo reservar memoria para el nuevo insumo.\n");
+        return;
+    }
+    nuevoNodo->insumo = insumo;
+    nuevoNodo->siguiente = tabla[idx];
+    tabla[idx] = nuevoNodo;
+}
+
+// Funciones hash adaptadas para los tipos de clave
+unsigned int hashCantidadPtr(const void* ptr) {
+    int cantidad = *(const int*)ptr;
+    return hashCantidad(cantidad);
+}
+unsigned int hashValorTotalPtr(const void* ptr) {
+    int valor = *(const int*)ptr;
+    return hashValorTotal(valor);
+}
+unsigned int hashStrPtr(const void* ptr) {
+    return hash((const char*)ptr);
+}
+unsigned int hashFechaPtr(const void* ptr) {
+    return hashFecha((const char*)ptr);
+}
+
+// Función para validar fecha en formato YYYY-MM-DD
+int esFechaValida(const char* fecha) {
+    int año, mes, dia;
+    if (sscanf(fecha, "%4d-%2d-%2d", &año, &mes, &dia) != 3)
+        return 0;
+    if (año < 1900 || año > 2100) return 0;
+    if (mes < 1 || mes > 12) return 0;
+    if (dia < 1 || dia > 31) return 0;
+    // Validación simple, puedes mejorarla para meses/días específicos
+    return 1;
+}
+
 // Función para agregar insumo
 void agregarInsumo() {
-    printf("\n[Función agregarInsumo aún no implementada]\n");
+    Insumo nuevo;
+    printf("\nIngrese la fecha (YYYY-MM-DD): ");
+    scanf("%10s", nuevo.fecha);
+
+    if (!esFechaValida(nuevo.fecha)) {
+        printf("Fecha inválida. Debe tener formato YYYY-MM-DD y valores correctos.\n");
+        return;
+    }
+
+    printf("Ingrese la categoría: ");
+    scanf("%19s", nuevo.categoria);
+
+    printf("Ingrese el nombre del producto: ");
+    scanf("%19s", nuevo.producto);
+
+    printf("Ingrese la cantidad: ");
+    scanf("%d", &nuevo.cantidad);
+
+    printf("Ingrese el valor total: ");
+    scanf("%d", &nuevo.valor_total);
+
+    if (nuevo.valor_total > saldo) {
+        printf("Saldo insuficiente. No se puede agregar el insumo.\n");
+        return;
+    }
+
+    saldo -= nuevo.valor_total;
+    printf("Insumo agregado correctamente. Saldo restante: %d\n", saldo);
+
+    // Insertar en las tablas hash
+    insertarEnTabla(hashMap.tabla_fecha,      hashFechaPtr,     nuevo.fecha,      nuevo);
+    insertarEnTabla(hashMap.tabla_categoria,  hashStrPtr,       nuevo.categoria,  nuevo);
+    insertarEnTabla(hashMap.tabla_producto,   hashStrPtr,       nuevo.producto,   nuevo);
+    insertarEnTabla(hashMap.tabla_cantidad,   hashCantidadPtr,  &nuevo.cantidad,  nuevo);
+    insertarEnTabla(hashMap.tabla_valor_total,hashValorTotalPtr,&nuevo.valor_total,nuevo);
 }
 
 
