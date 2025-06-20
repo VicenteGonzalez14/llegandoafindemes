@@ -1,9 +1,10 @@
 #include "extra.h"
-
+#include <time.h>
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
-#define MAX_INSUMOS 100
 
+Insumo insumos[MAX_INSUMOS];
+int totalInsumos = 0;
 
 char **leer_linea_csv(FILE *archivo, char separador) {
     static char linea[MAX_LINE_LENGTH];
@@ -83,10 +84,9 @@ void cargarDatasetDesdeCSV(const char *nombreArchivo) {
 
         strcpy(insumos[totalInsumos].fecha, campos[0]);
         strcpy(insumos[totalInsumos].categoria, campos[1]);
-        // Aquí podrías guardar el nombre del producto si agregas un campo en `Insumo`
         // strcpy(insumos[totalInsumos].producto, campos[2]); 
         insumos[totalInsumos].cantidad = atoi(campos[3]);
-        insumos[totalInsumos].valorTotal = atoi(campos[4]);
+        insumos[totalInsumos].valor_total = atoi(campos[4]);
 
         totalInsumos++;
     }
@@ -128,14 +128,6 @@ List *split_string(const char *str, const char *delim) {
 }
 
 
-#include "extra.h"
-#include <time.h>
-
-#define MAX_INSUMOS 100
-
-// Arreglo global y contador de insumos
-Insumo insumos[MAX_INSUMOS];
-int totalInsumos = 0;
 
 // Función auxiliar para determinar si una fecha está en los últimos N días
 int estaEnUltimosNDias(char fechaStr[], int dias) {
@@ -162,11 +154,11 @@ void mostrarBoletinSemanal() {
 
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 7)) {
-            printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valorTotal);
-            totalGastado += insumos[i].valorTotal;
+            printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valor_total);
+            totalGastado += insumos[i].valor_total;
 
-            if (insumos[i].valorTotal > maxGasto) {
-                maxGasto = insumos[i].valorTotal;
+            if (insumos[i].valor_total > maxGasto) {
+                maxGasto = insumos[i].valor_total;
                 strcpy(principalInsumo, insumos[i].categoria);
             }
         }
@@ -199,14 +191,14 @@ void mostrarBoletinMensual() {
 
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 30)) {
-            printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valorTotal);
-            totalGastado += insumos[i].valorTotal;
+            printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valor_total);
+            totalGastado += insumos[i].valor_total;
 
             // Top 3
             int encontrado = 0;
             for (int j = 0; j < 3; j++) {
                 if (strcmp(top3[j].categoria, insumos[i].categoria) == 0) {
-                    top3[j].gasto += insumos[i].valorTotal;
+                    top3[j].gasto += insumos[i].valor_total;
                     encontrado = 1;
                     break;
                 }
@@ -217,9 +209,9 @@ void mostrarBoletinMensual() {
                     if (top3[j].gasto < top3[minIdx].gasto)
                         minIdx = j;
                 }
-                if (insumos[i].valorTotal > top3[minIdx].gasto) {
+                if (insumos[i].valor_total > top3[minIdx].gasto) {
                     strcpy(top3[minIdx].categoria, insumos[i].categoria);
-                    top3[minIdx].gasto = insumos[i].valorTotal;
+                    top3[minIdx].gasto = insumos[i].valor_total;
                 }
             }
 
@@ -228,7 +220,7 @@ void mostrarBoletinMensual() {
             int semana = (30 - diasDesdeHoy) / 7;
 
             if (semana >= 0 && semana < 6) {
-                gastosPorSemana[semana] += insumos[i].valorTotal;
+                gastosPorSemana[semana] += insumos[i].valor_total;
                 semanaGastos[semana] = 1;
             }
         }
@@ -301,7 +293,7 @@ float predecirGastoSemanal() {
 
         int semana = (int)(dias_diferencia / 7);
         if (semana < semanasMax)
-            gastoSemanal[semana] += insumos[i].valorTotal;
+            gastoSemanal[semana] += insumos[i].valor_total;
 
         if (semana > semanaActual)
             semanaActual = semana;

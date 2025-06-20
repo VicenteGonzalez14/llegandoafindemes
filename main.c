@@ -1,20 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 #include "tdas/extra.h"
 #include "tdas/list.h"
 #include "tdas/list.h"
 
 #define HASH_SIZE 1000  // Tamaño de la tabla hash
 
-// Estructura de los insumos
-typedef struct {
-    char fecha[11];
-    char categoria[20];
-    char producto[20];
-    int cantidad;
-    int valor_total;
-} Insumo;
+
 
 typedef struct Nodo {
     Insumo insumo;
@@ -55,17 +49,12 @@ unsigned int hash(const char* clave) {
 }
 
 unsigned int hashFecha(const char* fecha) {
-    int año, mes, dia;
-    
-    // Asumimos que la fecha está en formato YYYY-MM-DD
-    sscanf(fecha, "%4d-%2d-%2d", &año, &mes, &dia);
-
-    //usamos todos los componentes de la fecha para generar un hash
+    int anio, mes, dia;
+    sscanf(fecha, "%4d-%2d-%2d", &anio, &mes, &dia);
     unsigned int hash_value = 0;
-    hash_value = (hash_value * 31) + año;  // Multiplicamos por un número primo
+    hash_value = (hash_value * 31) + anio;
     hash_value = (hash_value * 31) + mes;
     hash_value = (hash_value * 31) + dia;
-
     return hash_value % HASH_SIZE;
 }
 
@@ -118,13 +107,12 @@ unsigned int hashFechaPtr(const void* ptr) {
 
 // Función para validar fecha en formato YYYY-MM-DD
 int esFechaValida(const char* fecha) {
-    int año, mes, dia;
-    if (sscanf(fecha, "%4d-%2d-%2d", &año, &mes, &dia) != 3)
+    int anio, mes, dia;
+    if (sscanf(fecha, "%4d-%2d-%2d", &anio, &mes, &dia) != 3)
         return 0;
-    if (año < 1900 || año > 2100) return 0;
+    if (anio < 1900 || anio > 2100) return 0;
     if (mes < 1 || mes > 12) return 0;
     if (dia < 1 || dia > 31) return 0;
-    // Validación simple, puedes mejorarla para meses/días específicos
     return 1;
 }
 
@@ -169,6 +157,7 @@ void agregarInsumo() {
 
 
 int main() {
+    setlocale(LC_ALL, "");
     int opcion;
 
     do {

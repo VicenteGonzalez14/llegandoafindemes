@@ -6,12 +6,24 @@
 #include <string.h>
 #include "list.h"
 
+#define MAX_INSUMOS 10000
 
+typedef struct {
+    char fecha[11];
+    char categoria[20];
+    char producto[20];
+    int cantidad;
+    int valor_total;
+} Insumo;
+
+extern Insumo insumos[MAX_INSUMOS];
+extern int totalInsumos;
 
         
 void mostrarBoletinSemanal();
 void mostrarBoletinMensual();
 float predecirGastoSemanal();
+
 
 
 
