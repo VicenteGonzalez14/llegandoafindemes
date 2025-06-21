@@ -123,11 +123,11 @@ void agregarInsumo() {
     scanf("%10s", nuevo.fecha);
 
     if (!esFechaValida(nuevo.fecha)) {
-        printf("Fecha inválida. Debe tener formato YYYY-MM-DD y valores correctos.\n");
+        printf("Fecha invalida. Debe tener formato YYYY-MM-DD y valores correctos.\n");
         return;
     }
 
-    printf("Ingrese la categoría: ");
+    printf("Ingrese la categoria: ");
     scanf("%19s", nuevo.categoria);
 
     printf("Ingrese el nombre del producto: ");
@@ -161,13 +161,13 @@ int main() {
     int opcion;
 
     do {
-        printf("\n--- MENÚ PRINCIPAL ---\n");
+        printf("\n--- MENU PRINCIPAL ---\n");
         printf("1. Cargar dinero a la billetera\n");
         printf("2. Agregar insumo\n");
-        printf("3. Mostrar boletín semanal\n");
-        printf("4. Mostrar boletín mensual\n");
+        printf("3. Mostrar boletin semanal\n");
+        printf("4. Mostrar boletin mensual\n");
         printf("5. Salir\n");
-        printf("Seleccione una opción: ");
+        printf("Seleccione una opcion: ");
         scanf("%d", &opcion);
 
         switch(opcion) {
@@ -187,7 +187,7 @@ int main() {
                 printf("Saliendo del programa. ¡Hasta luego!\n");
                 break;
             default:
-                printf("Opción inválida. Intente nuevamente.\n");
+                printf("Opción invalida. Intente nuevamente.\n");
         }
 
     } while(opcion != 5);
