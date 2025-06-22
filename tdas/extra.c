@@ -3,9 +3,6 @@
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
 
-Insumo insumos[MAX_INSUMOS];
-int totalInsumos = 0;
-
 char **leer_linea_csv(FILE *archivo, char separador) {
     static char linea[MAX_LINE_LENGTH];
     static char *campos[MAX_FIELDS];
@@ -65,9 +62,9 @@ char **leer_linea_csv(FILE *archivo, char separador) {
 }
 
 void cargarDatasetDesdeCSV(const char *nombreArchivo) {
-    FILE *archivo = fopen(nombreArchivo, "insumos.csv");
+    FILE *archivo = fopen(nombreArchivo, "r");
     if (!archivo) {
-        printf("No se pudo abrir el archivo: %s\n", insumos);
+        printf("No se pudo abrir el archivo: %s\n", nombreArchivo);
         return;
     }
 
@@ -84,9 +81,16 @@ void cargarDatasetDesdeCSV(const char *nombreArchivo) {
 
         strcpy(insumos[totalInsumos].fecha, campos[0]);
         strcpy(insumos[totalInsumos].categoria, campos[1]);
-        // strcpy(insumos[totalInsumos].producto, campos[2]); 
+        strcpy(insumos[totalInsumos].producto, campos[2]); 
         insumos[totalInsumos].cantidad = atoi(campos[3]);
         insumos[totalInsumos].valor_total = atoi(campos[4]);
+
+        // Insertar en las tablas hash
+        insertarEnTabla(hashMap.tabla_fecha,      hashFechaPtr,     insumos[totalInsumos].fecha,       insumos[totalInsumos]);
+        insertarEnTabla(hashMap.tabla_categoria,  hashStrPtr,       insumos[totalInsumos].categoria,  insumos[totalInsumos]);
+        insertarEnTabla(hashMap.tabla_producto,   hashStrPtr,       insumos[totalInsumos].producto,   insumos[totalInsumos]);
+        insertarEnTabla(hashMap.tabla_cantidad,   hashCantidadPtr,  &insumos[totalInsumos].cantidad,  insumos[totalInsumos]);
+        insertarEnTabla(hashMap.tabla_valor_total,hashValorTotalPtr,&insumos[totalInsumos].valor_total,insumos[totalInsumos]);
 
         totalInsumos++;
     }
@@ -94,7 +98,6 @@ void cargarDatasetDesdeCSV(const char *nombreArchivo) {
     fclose(archivo);
     printf("Se cargaron %d insumos desde el archivo.\n", totalInsumos);
 }
-
 
 
 List *split_string(const char *str, const char *delim) {
@@ -337,4 +340,43 @@ void presioneTeclaParaContinuar() {
   puts("Presione una tecla para continuar...");
   getchar(); // Consume el '\n' del buffer de entrada
   getchar(); // Espera a que el usuario presione una tecla
+}
+
+void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
+    FILE *archivo = fopen(nombreArchivo, "a");
+    if (!archivo) return;
+    fprintf(archivo, "%s,%s,%s,%d,%d\n",
+            insumo->fecha,
+            insumo->categoria,
+            insumo->producto,
+            insumo->cantidad,
+            insumo->valor_total);
+    fclose(archivo);
+}
+
+void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
+    FILE *archivo = fopen(nombreArchivo, "w");
+    if (!archivo) return;
+    // Puedes escribir cabecera si lo deseas:
+    // fprintf(archivo, "fecha,categoria,producto,cantidad,valor_total\n");
+    for (int i = 0; i < totalInsumos; i++) {
+        fprintf(archivo, "%s,%s,%s,%d,%d\n",
+                insumos[i].fecha,
+                insumos[i].categoria,
+                insumos[i].producto,
+                insumos[i].cantidad,
+                insumos[i].valor_total);
+    }
+    fclose(archivo);
+}
+void insertarEnTabla(Nodo* tabla[], unsigned int (*func_hash)(const void*), const void* clave, Insumo insumo) {
+    unsigned int idx = func_hash(clave);
+    Nodo* nuevoNodo = (Nodo*)malloc(sizeof(Nodo));
+    if (!nuevoNodo) {
+        printf("Error: No se pudo reservar memoria para el nuevo insumo.\n");
+        return;
+    }
+    nuevoNodo->insumo = insumo;  // Copiar la estructura completa
+    nuevoNodo->siguiente = tabla[idx];
+    tabla[idx] = nuevoNodo;
 }

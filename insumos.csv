@@ -1,8 +1,10 @@
-fecha,categoria,producto,cantidad,valor_total
-2025-06-17,Comida,Pan,3,7500
-2025-06-16,Transporte,Bus,1,2000
-2025-06-10,Entretenimiento,Cine,2,10000
-2025-06-02,Comida,Arroz,1,2500
-2025-05-30,Transporte,Metro,2,4000
-2025-05-25,Servicios,Internet,1,15000
-2025-05-22,Hogar,Detergente,2,6000
+2025-04-01,Alimentos,Pan Bimbo 500g,2,6000
+2025-04-02,Alimentos,Yogurt Alpina 1L,3,12000
+2025-04-03,Higiene,Detergente Ariel 1kg,1,9500
+2025-04-04,Vestimenta,Camiseta Zara,2,48000
+2025-04-05,Tecnologia,Audifonos Xiaomi,1,35000
+2025-04-06,Electrodomesticos,Olla Arrocera,1,78000
+2025-04-07,Alimentos,Leche Colun Entera,4,16000
+2025-04-08,Higiene,Papel Higiénico Scot,3,12000
+2025-04-09,Vestimenta,Calcetines Puma (3 pa,1,15000
+2025-04-10,Mascotas,Comida Perro Pedigree,2,22000

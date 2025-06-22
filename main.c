@@ -6,25 +6,12 @@
 #include "tdas/list.h"
 #include "tdas/list.h"
 
-#define HASH_SIZE 1000  // Tamaño de la tabla hash
-
-
-
-typedef struct Nodo {
-    Insumo insumo;
-    struct Nodo* siguiente;
-} Nodo;
-
-// Mapa hash para los insumos (una tabla de listas enlazadas)
-typedef struct {
-    Nodo* tabla_fecha[HASH_SIZE];
-    Nodo* tabla_categoria[HASH_SIZE];
-    Nodo* tabla_producto[HASH_SIZE];
-    Nodo* tabla_cantidad[HASH_SIZE];
-    Nodo* tabla_valor_total[HASH_SIZE];
-} HashMap;
-
+// Instancia global del HashMap
+HashMap hashMap = {0};
 int saldo = 0;
+Insumo insumos[MAX_INSUMOS];
+int totalInsumos = 0;
+
 void cargarDinero();               // 1
 void agregarInsumo();              // 2
 void mostrarBoletinSemanal();     // 3
@@ -73,21 +60,7 @@ void cargarDinero() {
     printf("Dinero cargado exitosamente. Saldo actual: %d\n", saldo);
 }
 
-// Instancia global del HashMap
-HashMap hashMap;
 
-// Función auxiliar para insertar un insumo en una tabla hash específica
-void insertarEnTabla(Nodo* tabla[], unsigned int (*func_hash)(const void*), const void* clave, Insumo insumo) {
-    unsigned int idx = func_hash(clave);
-    Nodo* nuevoNodo = (Nodo*)malloc(sizeof(Nodo));
-    if (!nuevoNodo) {
-        printf("Error: No se pudo reservar memoria para el nuevo insumo.\n");
-        return;
-    }
-    nuevoNodo->insumo = insumo;
-    nuevoNodo->siguiente = tabla[idx];
-    tabla[idx] = nuevoNodo;
-}
 
 // Funciones hash adaptadas para los tipos de clave
 unsigned int hashCantidadPtr(const void* ptr) {
@@ -147,17 +120,29 @@ void agregarInsumo() {
     saldo -= nuevo.valor_total;
     printf("Insumo agregado correctamente. Saldo restante: %d\n", saldo);
 
-    // Insertar en las tablas hash
+    // Guardar en memoria
+    insumos[totalInsumos] = nuevo;
+    totalInsumos++;
+
+    // Corrección: quitar '&' en las llamadas a insertarEnTabla
     insertarEnTabla(hashMap.tabla_fecha,      hashFechaPtr,     nuevo.fecha,      nuevo);
     insertarEnTabla(hashMap.tabla_categoria,  hashStrPtr,       nuevo.categoria,  nuevo);
     insertarEnTabla(hashMap.tabla_producto,   hashStrPtr,       nuevo.producto,   nuevo);
     insertarEnTabla(hashMap.tabla_cantidad,   hashCantidadPtr,  &nuevo.cantidad,  nuevo);
     insertarEnTabla(hashMap.tabla_valor_total,hashValorTotalPtr,&nuevo.valor_total,nuevo);
+
+    // Guardar en CSV
+    guardarInsumoEnCSV(&nuevo, "insumos.csv");
+
+    printf("Insumo agregado correctamente.\n");
+
 }
 
 
 int main() {
     setlocale(LC_ALL, "");
+    cargarDatasetDesdeCSV("insumos.csv"); // Carga los insumos al iniciar
+
     int opcion;
 
     do {
@@ -184,10 +169,11 @@ int main() {
                 mostrarBoletinMensual();
                 break;
             case 5:
-                printf("Saliendo del programa. ¡Hasta luego!\n");
+                guardarTodosLosInsumosEnCSV("insumos.csv");
+                printf("Saliendo del programa.¡Hasta luego!\n");
                 break;
             default:
-                printf("Opción invalida. Intente nuevamente.\n");
+                printf("Opción invalida.Intente nuevamente.\n");
         }
 
     } while(opcion != 5);
