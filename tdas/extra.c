@@ -141,7 +141,13 @@ int estaEnUltimosNDias(char fechaStr[], int dias) {
     fecha.tm_mon = mes - 1;      // Meses desde 0
     fecha.tm_mday = dia;         // Día del mes 
     
-    time_t t_actual = time(NULL);
+    // Fecha simulada para pruebas: 2025-05-24
+    struct tm fecha_simulada = {0};
+    fecha_simulada.tm_year = 2025 - 1900;
+    fecha_simulada.tm_mon = 4; // mayo (0-based)
+    fecha_simulada.tm_mday = 24;
+    time_t t_actual = mktime(&fecha_simulada);
+
     time_t t_fecha = mktime(&fecha);
     double diferencia = difftime(t_actual, t_fecha) / (60 * 60 * 24);
 
@@ -157,6 +163,7 @@ void mostrarBoletinSemanal() {
 
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 7)) {
+            if (strlen(insumos[i].categoria) == 0) continue; // Evitar insumos sin categoría
             printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valor_total);
             totalGastado += insumos[i].valor_total;
 
@@ -194,6 +201,7 @@ void mostrarBoletinMensual() {
 
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 30)) {
+            if (strlen(insumos[i].categoria) == 0) continue; // Evitar insumos sin categoría
             printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valor_total);
             totalGastado += insumos[i].valor_total;
 

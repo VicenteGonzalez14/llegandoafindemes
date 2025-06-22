@@ -91,52 +91,80 @@ int esFechaValida(const char* fecha) {
 
 // Función para agregar insumo
 void agregarInsumo() {
-    Insumo nuevo;
-    printf("\nIngrese la fecha (YYYY-MM-DD): ");
-    scanf("%10s", nuevo.fecha);
-
-    if (!esFechaValida(nuevo.fecha)) {
-        printf("Fecha invalida. Debe tener formato YYYY-MM-DD y valores correctos.\n");
+    FILE *archivo = fopen("insumos.csv", "a");
+    if (archivo == NULL) {
+        printf("Error al abrir el archivo.\n");
         return;
     }
 
-    printf("Ingrese la categoria: ");
-    scanf("%19s", nuevo.categoria);
+    char fecha[11];
+    int tipo;
+    char *categorias[] = {
+        "Alimentos", "Higiene", "Vestimenta", 
+        "Tecnologia", "Electrodomesticos", "Mascotas"
+    };
+    char categoria[30];
+    char producto[100];
+    int cantidad;
+    int costo;
 
+    // Ingresar fecha
+    printf("Ingrese la fecha (YYYY-MM-DD): ");
+    scanf("%10s", fecha);
+
+    // Seleccionar categoría
+    printf("Seleccione el tipo de insumo:\n");
+    for (int i = 0; i < 6; i++) {
+        printf("%d. %s\n", i + 1, categorias[i]);
+    }
+    printf("Opción: ");
+    scanf("%d", &tipo);
+    if (tipo < 1 || tipo > 6) {
+        printf("Opción inválida. Cancelando ingreso.\n");
+        fclose(archivo);
+        return;
+    }
+    strcpy(categoria, categorias[tipo - 1]);
+
+    getchar(); // Limpiar buffer del scanf
     printf("Ingrese el nombre del producto: ");
-    scanf("%19s", nuevo.producto);
+    fgets(producto, sizeof(producto), stdin);
+    producto[strcspn(producto, "\n")] = 0; // Eliminar salto de línea
 
+    // Ingresar cantidad y costo
     printf("Ingrese la cantidad: ");
-    scanf("%d", &nuevo.cantidad);
+    scanf("%d", &cantidad);
+    printf("Ingrese el costo total: ");
+    scanf("%d", &costo);
 
-    printf("Ingrese el valor total: ");
-    scanf("%d", &nuevo.valor_total);
+    // Guardar en archivo CSV
+    fprintf(archivo, "%s,%s,%s,%d,%d\n", fecha, categoria, producto, cantidad, costo);
+    fclose(archivo);
 
-    if (nuevo.valor_total > saldo) {
-        printf("Saldo insuficiente. No se puede agregar el insumo.\n");
-        return;
-    }
+    // Crear insumo para agregar al hashMap
+    Insumo nuevo;
+    strcpy(nuevo.fecha, fecha);
+    strcpy(nuevo.categoria, categoria);
+    strcpy(nuevo.producto, producto);
+    nuevo.cantidad = cantidad;
+    nuevo.valor_total = costo;
 
-    saldo -= nuevo.valor_total;
-    printf("Insumo agregado correctamente. Saldo restante: %d\n", saldo);
+    // Insertar en tablas hash
+    insertarEnTabla(hashMap.tabla_fecha,        hashFechaPtr,       nuevo.fecha,     nuevo);
+    insertarEnTabla(hashMap.tabla_categoria,    hashStrPtr,         nuevo.categoria, nuevo);
+    insertarEnTabla(hashMap.tabla_producto,     hashStrPtr,         nuevo.producto,  nuevo);
+    insertarEnTabla(hashMap.tabla_cantidad,     hashCantidadPtr,   &nuevo.cantidad,  nuevo);
+    insertarEnTabla(hashMap.tabla_valor_total,  hashValorTotalPtr, &nuevo.valor_total, nuevo);
 
-    // Guardar en memoria
-    insumos[totalInsumos] = nuevo;
+    insumos[totalInsumos++] = nuevo;
     totalInsumos++;
 
-    // Corrección: quitar '&' en las llamadas a insertarEnTabla
-    insertarEnTabla(hashMap.tabla_fecha,      hashFechaPtr,     nuevo.fecha,      nuevo);
-    insertarEnTabla(hashMap.tabla_categoria,  hashStrPtr,       nuevo.categoria,  nuevo);
-    insertarEnTabla(hashMap.tabla_producto,   hashStrPtr,       nuevo.producto,   nuevo);
-    insertarEnTabla(hashMap.tabla_cantidad,   hashCantidadPtr,  &nuevo.cantidad,  nuevo);
-    insertarEnTabla(hashMap.tabla_valor_total,hashValorTotalPtr,&nuevo.valor_total,nuevo);
-
-    // Guardar en CSV
-    guardarInsumoEnCSV(&nuevo, "insumos.csv");
+    saldo -= costo;
 
     printf("Insumo agregado correctamente.\n");
-
+    printf("Saldo actual: %d\n", saldo);
 }
+
 
 
 int main() {
