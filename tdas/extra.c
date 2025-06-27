@@ -65,6 +65,19 @@ char **leer_linea_csv(FILE *archivo, char separador) {
     return campos;
 }
 
+char *strptime(const char *s, const char *format, struct tm *tm) {
+    if (strcmp(format, "%Y-%m-%d") == 0) {
+        int year, month, day;
+        if (sscanf(s, "%d-%d-%d", &year, &month, &day) == 3) {
+            tm->tm_year = year - 1900;
+            tm->tm_mon = month - 1;
+            tm->tm_mday = day;
+            return (char*)s + 10;
+        }
+    }
+    return NULL;
+}
+
 void cargarDatasetDesdeCSV(const char *nombreArchivo) {
     FILE *archivo = fopen(nombreArchivo, "r");
     if (!archivo) {
@@ -133,29 +146,67 @@ List *split_string(const char *str, const char *delim) {
 
   return result;
 }
+void insertarEnTabla(Nodo* tabla[], unsigned int (*func_hash)(const void*), const void* clave, Insumo insumo) {
+    unsigned int idx = func_hash(clave) % hashMap.capacidad;
+    Nodo* nuevo = malloc(sizeof(Nodo));
+    nuevo->insumo = insumo;
+    nuevo->siguiente = tabla[idx];
+    tabla[idx] = nuevo;
+}
+
+void buscarInsumosPorCategoria(const char *categoria) {
+    unsigned int idx = hashStr(categoria);  // Usar hashStr para generar el índice
+    Nodo *nodo = hashMap.tabla_categoria[idx];
+    while (nodo) {
+        if (strcmp(nodo->insumo.categoria, categoria) == 0) {
+            // Mostrar los detalles del insumo
+            printf("Insumo encontrado: %s - %s - %d - $%d\n", 
+                   nodo->insumo.fecha, nodo->insumo.producto, 
+                   nodo->insumo.cantidad, nodo->insumo.valor_total);
+        }
+        nodo = nodo->siguiente;
+    }
+}
+void buscarInsumosPorFecha(const char *fecha) {
+    unsigned int idx = hashFecha(fecha);  // Genera el índice usando la función hashFecha
+    Nodo *nodo = hashMap.tabla_fecha[idx];
+    while (nodo) {
+        if (strcmp(nodo->insumo.fecha, fecha) == 0) {
+            // Mostrar los detalles del insumo
+            printf("Insumo encontrado: %s - %s - %d - $%d\n", 
+                   nodo->insumo.producto, nodo->insumo.categoria, 
+                   nodo->insumo.cantidad, nodo->insumo.valor_total);
+        }
+        nodo = nodo->siguiente;
+    }
+}
 
 
-
-// Función auxiliar para determinar si una fecha está en los últimos N días
-int estaEnUltimosNDias(char fechaStr[], int dias) {
-    struct tm fecha = {0};
-    int anio, mes, dia;
-    sscanf(fechaStr, "%d-%d-%d", &anio, &mes, &dia);
-    fecha.tm_year = anio - 1900; // Años desde 1900
-    fecha.tm_mon = mes - 1;      // Meses desde 0
-    fecha.tm_mday = dia;         // Día del mes 
+void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fin) {
+    // Convierte las fechas a formato timestamp para comparar
+    struct tm tm_inicio = {0}, tm_fin = {0};
+    strptime(fecha_inicio, "%Y-%m-%d", &tm_inicio);
+    strptime(fecha_fin, "%Y-%m-%d", &tm_fin);
     
-    // Fecha simulada para pruebas: 2025-05-24
-    struct tm fecha_simulada = {0};
-    fecha_simulada.tm_year = 2025 - 1900;
-    fecha_simulada.tm_mon = 4; // mayo (0-based)
-    fecha_simulada.tm_mday = 24;
-    time_t t_actual = mktime(&fecha_simulada);
+    time_t t_inicio = mktime(&tm_inicio);
+    time_t t_fin = mktime(&tm_fin);
 
-    time_t t_fecha = mktime(&fecha);
-    double diferencia = difftime(t_actual, t_fecha) / (60 * 60 * 24);
+    // Recorre la tabla de fechas
+    for (int i = 0; i < hashMap.capacidad; i++) {
+        Nodo *nodo = hashMap.tabla_fecha[i];
+        while (nodo) {
+            struct tm tm_insumo = {0};
+            strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
+            time_t t_insumo = mktime(&tm_insumo);
 
-    return diferencia >= 0 && diferencia <= dias;
+            if (t_insumo >= t_inicio && t_insumo <= t_fin) {
+                printf("Insumo dentro del rango: %s - %d unidades - $%d\n", 
+                        nodo->insumo.producto, nodo->insumo.cantidad, nodo->insumo.valor_total);
+            }
+
+            nodo = nodo->siguiente;
+        }
+    }
 }
 
 void mostrarBoletinSemanal() {
@@ -165,25 +216,45 @@ void mostrarBoletinSemanal() {
     int maxGasto = 0;
     char principalInsumo[50] = "";
 
-    for (int i = 0; i < totalInsumos; i++) {
-        if (estaEnUltimosNDias(insumos[i].fecha, 7)) {
-            if (strlen(insumos[i].categoria) == 0) continue; // Evitar insumos sin categoría
-            printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valor_total);
-            totalGastado += insumos[i].valor_total;
+    // Obtener la fecha actual para comparar con los insumos
+    time_t t_actual = time(NULL);
+    struct tm *fecha_actual = localtime(&t_actual);
+    fecha_actual->tm_hour = 0; fecha_actual->tm_min = 0; fecha_actual->tm_sec = 0;
+    time_t t_inicio_semana = t_actual - (7 * 24 * 60 * 60); // 7 días atrás
 
-            if (insumos[i].valor_total > maxGasto) {
-                maxGasto = insumos[i].valor_total;
-                strcpy(principalInsumo, insumos[i].categoria);
+    // Iterar por la tabla de fechas
+    for (int i = 0; i < hashMap.capacidad; i++) {
+        Nodo *nodo_fecha = hashMap.tabla_fecha[i];
+        while (nodo_fecha) {
+            struct tm tm_insumo = {0};
+            strptime(nodo_fecha->insumo.fecha, "%Y-%m-%d", &tm_insumo);
+            time_t t_insumo = mktime(&tm_insumo);
+
+            // Comprobar si el insumo está en la semana actual (últimos 7 días)
+            if (t_insumo >= t_inicio_semana && t_insumo <= t_actual) {
+                // Procesar el insumo
+                if (strlen(nodo_fecha->insumo.categoria) == 0) continue; // Evitar insumos sin categoría
+                printf("- %s: %d unidades, $%d\n", nodo_fecha->insumo.categoria, nodo_fecha->insumo.cantidad, nodo_fecha->insumo.valor_total);
+                totalGastado += nodo_fecha->insumo.valor_total;
+
+                // Actualizar el insumo más caro de la semana
+                if (nodo_fecha->insumo.valor_total > maxGasto) {
+                    maxGasto = nodo_fecha->insumo.valor_total;
+                    strcpy(principalInsumo, nodo_fecha->insumo.categoria);
+                }
             }
+            nodo_fecha = nodo_fecha->siguiente;
         }
     }
 
+    // Mostrar los resultados
     printf("Total gastado esta semana: $%d\n", totalGastado);
     if (strlen(principalInsumo) > 0)
         printf("Principal insumo de la semana: %s\n", principalInsumo);
     else
         printf("No hay insumos registrados esta semana.\n");
 }
+
 
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
@@ -192,6 +263,7 @@ void mostrarBoletinMensual() {
     Map* gastoPorSemana = createMap(is_equal_string);
     int totalGastado = 0;
 
+<<<<<<< Updated upstream
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 30)) {
             if (strlen(insumos[i].categoria) == 0) continue;
@@ -235,6 +307,15 @@ void mostrarBoletinMensual() {
     }
 
     printf("\nTotal gastado en los últimos 30 días: $%d\n", totalGastado);
+=======
+    // Matriz para predicción (máx. 6 semanas)
+    int semanaActual = 1;
+    int semanas[6] = {0};
+    int gastosPorSemana[6] = {0};
+    int semanaGastos[6] = {0};
+    int contadorSemanas = 0;
+
+>>>>>>> Stashed changes
 
     // --- Mostrar top 3 categorías ---
     printf("\nTop 3 categorías más gastadas:\n");
