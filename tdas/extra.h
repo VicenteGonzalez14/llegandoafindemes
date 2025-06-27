@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h> 
 #include "list.h"
 
 #define MAX_INSUMOS 10000
@@ -51,5 +52,9 @@ unsigned int hashFechaPtr(const void* ptr);
 unsigned int hashStrPtr(const void* ptr);
 unsigned int hashCantidadPtr(const void* ptr);
 unsigned int hashValorTotalPtr(const void* ptr);
-
+void redimensionarHashMap(HashMap *mapa, int nueva_capacidad);
+void rehashTablaStr(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(const char*), const char* (*obtenerClave)(const Insumo*));
+void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(int), int (*obtenerClave)(const Insumo*));
+unsigned int hashStr(const char* clave);
+unsigned int hashFecha(const char* fecha);
 #endif
