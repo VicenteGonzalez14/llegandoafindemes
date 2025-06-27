@@ -19,18 +19,31 @@ void mostrarBoletinMensual();     // 4
 
 // Funciones de hash para valores enteros
 unsigned int hashCantidad(int cantidad) {
+    // Usamos una mezcla de bits simple para distribuir mejor los valores
+    cantidad = cantidad ^ (cantidad >> 16);
+    cantidad = cantidad * 0x85ebca6b;
+    cantidad = cantidad ^ (cantidad >> 13);
+    cantidad = cantidad * 0xc2b2ae35;
+    cantidad = cantidad ^ (cantidad >> 16);
     return cantidad % HASH_SIZE;
 }
 
+
 unsigned int hashValorTotal(int valor) {
-    return (valor / 10) % HASH_SIZE;
+    valor = valor ^ (valor >> 16);
+    valor = valor * 0x85ebca6b;
+    valor = valor ^ (valor >> 13);
+    valor = valor * 0xc2b2ae35;
+    valor = valor ^ (valor >> 16);
+    return valor % HASH_SIZE;
 }
 
-// Función de hash simple para cadenas de caracteres
-unsigned int hash(const char* clave) {
-    unsigned int hash_value = 0;
+
+unsigned int hashStr(const char* clave) {
+    unsigned int hash_value = 5381; // Número inicial estándar para djb2
     while (*clave) {
-        hash_value = (hash_value * 31) + *clave++;
+        hash_value = ((hash_value << 5) + hash_value) + (unsigned char)(*clave); // hash_value * 33 + char
+        clave++;
     }
     return hash_value % HASH_SIZE;
 }
@@ -38,13 +51,22 @@ unsigned int hash(const char* clave) {
 unsigned int hashFecha(const char* fecha) {
     int anio, mes, dia;
     sscanf(fecha, "%4d-%2d-%2d", &anio, &mes, &dia);
-    unsigned int hash_value = 0;
-    hash_value = (hash_value * 31) + anio;
+    
+    // Combina el año, mes y día de una manera más eficiente
+    unsigned int hash_value = anio;
     hash_value = (hash_value * 31) + mes;
     hash_value = (hash_value * 31) + dia;
+
+    // Realizamos una mezcla similar a la de las cantidades y valores
+    hash_value = hash_value ^ (hash_value >> 16);
+    hash_value = hash_value * 0x85ebca6b;
+    hash_value = hash_value ^ (hash_value >> 13);
+    hash_value = hash_value * 0xc2b2ae35;
+    hash_value = hash_value ^ (hash_value >> 16);
+
     return hash_value % HASH_SIZE;
 }
-
+ 
 // Función para cargar dinero
 void cargarDinero() {
     int monto;
