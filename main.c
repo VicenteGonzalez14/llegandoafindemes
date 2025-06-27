@@ -4,7 +4,9 @@
 #include <locale.h>
 #include "tdas/extra.h"
 #include "tdas/list.h"
-#include "tdas/list.h"
+
+#define HASHMAP_INICIAL 1000
+#define FACTOR_CARGA 0.75  // Factor de carga para el redimensionamiento de la tabla
 
 // Instancia global del HashMap
 HashMap hashMap = {0};
@@ -12,14 +14,8 @@ int saldo = 0;
 Insumo insumos[MAX_INSUMOS];
 int totalInsumos = 0;
 
-void cargarDinero();               // 1
-void agregarInsumo();              // 2
-void mostrarBoletinSemanal();     // 3
-void mostrarBoletinMensual();     // 4
-
 // Funciones de hash para valores enteros
 unsigned int hashCantidad(int cantidad) {
-    // Usamos una mezcla de bits simple para distribuir mejor los valores
     cantidad = cantidad ^ (cantidad >> 16);
     cantidad = cantidad * 0x85ebca6b;
     cantidad = cantidad ^ (cantidad >> 13);
@@ -27,7 +23,6 @@ unsigned int hashCantidad(int cantidad) {
     cantidad = cantidad ^ (cantidad >> 16);
     return cantidad % HASH_SIZE;
 }
-
 
 unsigned int hashValorTotal(int valor) {
     valor = valor ^ (valor >> 16);
@@ -38,11 +33,10 @@ unsigned int hashValorTotal(int valor) {
     return valor % HASH_SIZE;
 }
 
-
 unsigned int hashStr(const char* clave) {
     unsigned int hash_value = 5381; // Número inicial estándar para djb2
     while (*clave) {
-        hash_value = ((hash_value << 5) + hash_value) + (unsigned char)(*clave); // hash_value * 33 + char
+        hash_value = ((hash_value << 5) + hash_value) + (unsigned char)(*clave);
         clave++;
     }
     return hash_value % HASH_SIZE;
@@ -52,12 +46,9 @@ unsigned int hashFecha(const char* fecha) {
     int anio, mes, dia;
     sscanf(fecha, "%4d-%2d-%2d", &anio, &mes, &dia);
     
-    // Combina el año, mes y día de una manera más eficiente
     unsigned int hash_value = anio;
     hash_value = (hash_value * 31) + mes;
     hash_value = (hash_value * 31) + dia;
-
-    // Realizamos una mezcla similar a la de las cantidades y valores
     hash_value = hash_value ^ (hash_value >> 16);
     hash_value = hash_value * 0x85ebca6b;
     hash_value = hash_value ^ (hash_value >> 13);
@@ -66,7 +57,7 @@ unsigned int hashFecha(const char* fecha) {
 
     return hash_value % HASH_SIZE;
 }
- 
+
 // Función para cargar dinero
 void cargarDinero() {
     int monto;
@@ -82,20 +73,21 @@ void cargarDinero() {
     printf("Dinero cargado exitosamente. Saldo actual: %d\n", saldo);
 }
 
-
-
 // Funciones hash adaptadas para los tipos de clave
 unsigned int hashCantidadPtr(const void* ptr) {
     int cantidad = *(const int*)ptr;
     return hashCantidad(cantidad);
 }
+
 unsigned int hashValorTotalPtr(const void* ptr) {
     int valor = *(const int*)ptr;
     return hashValorTotal(valor);
 }
+
 unsigned int hashStrPtr(const void* ptr) {
-    return hash((const char*)ptr);
+    return hashStr((const char*)ptr);
 }
+
 unsigned int hashFechaPtr(const void* ptr) {
     return hashFecha((const char*)ptr);
 }
@@ -133,6 +125,11 @@ void agregarInsumo() {
     // Ingresar fecha
     printf("Ingrese la fecha (YYYY-MM-DD): ");
     scanf("%10s", fecha);
+    if (!esFechaValida(fecha)) {
+        printf("Fecha inválida. Por favor ingrese una fecha en formato YYYY-MM-DD.\n");
+        fclose(archivo);
+        return;
+    }
 
     // Seleccionar categoría
     printf("Seleccione el tipo de insumo:\n");
@@ -156,8 +153,24 @@ void agregarInsumo() {
     // Ingresar cantidad y costo
     printf("Ingrese la cantidad: ");
     scanf("%d", &cantidad);
+    if (cantidad <= 0) {
+        printf("La cantidad debe ser mayor que cero.\n");
+        fclose(archivo);
+        return;
+    }
+
     printf("Ingrese el costo total: ");
     scanf("%d", &costo);
+    if (costo <= 0) {
+        printf("El costo debe ser mayor que cero.\n");
+        fclose(archivo);
+        return;
+    }
+
+    // Verificar si es necesario redimensionar el HashMap
+    if (hashMap.elementos >= hashMap.capacidad * FACTOR_CARGA) {
+        redimensionarHashMap(&hashMap, hashMap.capacidad * 2);
+    }
 
     // Guardar en archivo CSV
     fprintf(archivo, "%s,%s,%s,%d,%d\n", fecha, categoria, producto, cantidad, costo);
@@ -175,11 +188,11 @@ void agregarInsumo() {
     insertarEnTabla(hashMap.tabla_fecha,        hashFechaPtr,       nuevo.fecha,     nuevo);
     insertarEnTabla(hashMap.tabla_categoria,    hashStrPtr,         nuevo.categoria, nuevo);
     insertarEnTabla(hashMap.tabla_producto,     hashStrPtr,         nuevo.producto,  nuevo);
-    insertarEnTabla(hashMap.tabla_cantidad,     hashCantidadPtr,   &nuevo.cantidad,  nuevo);
-    insertarEnTabla(hashMap.tabla_valor_total,  hashValorTotalPtr, &nuevo.valor_total, nuevo);
+    insertarEnTabla(hashMap.tabla_cantidad,     hashCantidadPtr,    &nuevo.cantidad, nuevo);
+    insertarEnTabla(hashMap.tabla_valor_total,  hashValorTotalPtr,  &nuevo.valor_total, nuevo);
 
+    hashMap.elementos++;
     insumos[totalInsumos++] = nuevo;
-    totalInsumos++;
 
     saldo -= costo;
 
@@ -187,11 +200,120 @@ void agregarInsumo() {
     printf("Saldo actual: %d\n", saldo);
 }
 
+// Funciones getter para cada tipo de clave
+const char* obtenerFecha(Insumo insumo) {
+    return insumo.fecha;
+}
 
+const char* obtenerCategoria(Insumo insumo) {
+    return insumo.categoria;
+}
+
+const char* obtenerProducto(Insumo insumo) {
+    return insumo.producto;
+}
+
+int obtenerCantidad(Insumo insumo) {
+    return insumo.cantidad;
+}
+
+int obtenerValorTotal(Insumo insumo) {
+    return insumo.valor_total;
+}
+
+// Función para liberar la memoria de la tabla hash
+void liberarTabla(Nodo **tabla, int capacidad) {
+    for (int i = 0; i < capacidad; i++) {
+        Nodo *actual = tabla[i];
+        while (actual) {
+            Nodo *tmp = actual;
+            actual = actual->siguiente;
+            free(tmp);
+        }
+    }
+}
+
+// Función para redimensionar el HashMap
+void redimensionarHashMap(HashMap *mapa, int nueva_capacidad) {
+    Nodo **nueva_fecha = calloc(nueva_capacidad, sizeof(Nodo*));
+    Nodo **nueva_categoria = calloc(nueva_capacidad, sizeof(Nodo*));
+    Nodo **nueva_producto = calloc(nueva_capacidad, sizeof(Nodo*));
+    Nodo **nueva_cantidad = calloc(nueva_capacidad, sizeof(Nodo*));
+    Nodo **nueva_valor_total = calloc(nueva_capacidad, sizeof(Nodo*));
+
+    if (!nueva_fecha || !nueva_categoria || !nueva_producto || !nueva_cantidad || !nueva_valor_total) {
+        printf("Error al asignar memoria para las nuevas tablas.\n");
+        free(nueva_fecha);
+        free(nueva_categoria);
+        free(nueva_producto);
+        free(nueva_cantidad);
+        free(nueva_valor_total);
+        return;
+    }
+
+    rehashTablaStr(mapa->tabla_fecha, mapa->capacidad, nueva_fecha, nueva_capacidad, hashFecha, obtenerFecha);
+    rehashTablaStr(mapa->tabla_categoria, mapa->capacidad, nueva_categoria, nueva_capacidad, hashStr, obtenerCategoria);
+    rehashTablaStr(mapa->tabla_producto, mapa->capacidad, nueva_producto, nueva_capacidad, hashStr, obtenerProducto);
+    rehashTablaInt(mapa->tabla_cantidad, mapa->capacidad, nueva_cantidad, nueva_capacidad, hashCantidad, obtenerCantidad);
+    rehashTablaInt(mapa->tabla_valor_total, mapa->capacidad, nueva_valor_total, nueva_capacidad, hashValorTotal, obtenerValorTotal);
+
+    liberarTabla(mapa->tabla_fecha, mapa->capacidad);
+    liberarTabla(mapa->tabla_categoria, mapa->capacidad);
+    liberarTabla(mapa->tabla_producto, mapa->capacidad);
+    liberarTabla(mapa->tabla_cantidad, mapa->capacidad);
+    liberarTabla(mapa->tabla_valor_total, mapa->capacidad);
+
+    mapa->tabla_fecha = nueva_fecha;
+    mapa->tabla_categoria = nueva_categoria;
+    mapa->tabla_producto = nueva_producto;
+    mapa->tabla_cantidad = nueva_cantidad;
+    mapa->tabla_valor_total = nueva_valor_total;
+    mapa->capacidad = nueva_capacidad;
+}
+
+// Rehashing para tablas de tipo string
+void rehashTablaStr(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(const char*), const char* (*obtenerClave)(Insumo)) {
+    for (int i = 0; i < capacidadVieja; i++) {
+        Nodo* actual = tablaVieja[i];
+        while (actual) {
+            const char* clave = obtenerClave(actual->insumo);  
+            unsigned int idx = func_hash(clave) % nueva_capacidad;
+            Nodo* nuevoNodo = malloc(sizeof(Nodo));
+            nuevoNodo->insumo = actual->insumo;
+            nuevoNodo->siguiente = tablaNueva[idx];
+            tablaNueva[idx] = nuevoNodo;
+            actual = actual->siguiente;
+        }
+    }
+}
+
+// Rehashing para tablas de tipo int
+void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(int), int (*obtenerClave)(Insumo)) {
+    for (int i = 0; i < capacidadVieja; i++) {
+        Nodo* actual = tablaVieja[i];
+        while (actual) {
+            int clave = obtenerClave(actual->insumo);  
+            unsigned int idx = func_hash(clave) % nueva_capacidad;
+            Nodo* nuevoNodo = malloc(sizeof(Nodo));
+            nuevoNodo->insumo = actual->insumo;
+            nuevoNodo->siguiente = tablaNueva[idx];
+            tablaNueva[idx] = nuevoNodo;
+            actual = actual->siguiente;
+        }
+    }
+}
 
 int main() {
     setlocale(LC_ALL, "");
     cargarDatasetDesdeCSV("insumos.csv"); // Carga los insumos al iniciar
+
+    hashMap.tabla_fecha = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
+    hashMap.tabla_categoria = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
+    hashMap.tabla_producto = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
+    hashMap.tabla_cantidad = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
+    hashMap.tabla_valor_total = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
+    hashMap.capacidad = HASHMAP_INICIAL;
+    hashMap.elementos = 0;
 
     int opcion;
 
@@ -220,10 +342,10 @@ int main() {
                 break;
             case 5:
                 guardarTodosLosInsumosEnCSV("insumos.csv");
-                printf("Saliendo del programa.¡Hasta luego!\n");
+                printf("Saliendo del programa. ¡Hasta luego!\n");
                 break;
             default:
-                printf("Opción invalida.Intente nuevamente.\n");
+                printf("Opción inválida. Intente nuevamente.\n");
         }
 
     } while(opcion != 5);

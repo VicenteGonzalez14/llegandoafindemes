@@ -377,14 +377,3 @@ void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
     }
     fclose(archivo);
 }
-void insertarEnTabla(Nodo* tabla[], unsigned int (*func_hash)(const void*), const void* clave, Insumo insumo) {
-    unsigned int idx = func_hash(clave);
-    Nodo* nuevoNodo = (Nodo*)malloc(sizeof(Nodo));
-    if (!nuevoNodo) {
-        printf("Error: No se pudo reservar memoria para el nuevo insumo.\n");
-        return;
-    }
-    nuevoNodo->insumo = insumo;  // Copiar la estructura completa
-    nuevoNodo->siguiente = tabla[idx];
-    tabla[idx] = nuevoNodo;
-}

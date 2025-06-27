@@ -23,11 +23,13 @@ typedef struct Nodo {
 
 // Mapa hash para los insumos (una tabla de listas enlazadas)
 typedef struct {
-    Nodo* tabla_fecha[HASH_SIZE];
-    Nodo* tabla_categoria[HASH_SIZE];
-    Nodo* tabla_producto[HASH_SIZE];
-    Nodo* tabla_cantidad[HASH_SIZE];
-    Nodo* tabla_valor_total[HASH_SIZE];
+    Nodo **tabla_fecha;
+    Nodo **tabla_categoria;
+    Nodo **tabla_producto;
+    Nodo **tabla_cantidad;
+    Nodo **tabla_valor_total;
+    int capacidad;
+    int elementos;
 } HashMap;
 
 extern Insumo insumos[MAX_INSUMOS];
