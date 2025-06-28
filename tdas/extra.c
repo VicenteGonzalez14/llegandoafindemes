@@ -4,8 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
+
+
+int string_lower_than(void* a, void* b) {
+    return strcmp((char*)a, (char*)b) < 0;
+}
+
 
 
 
@@ -85,6 +92,7 @@ char *strptime(const char *s, const char *format, struct tm *tm) {
 }
 
 void cargarDatasetDesdeCSV(const char *nombreArchivo) {
+    
     FILE *archivo = fopen(nombreArchivo, "r");
     if (!archivo) {
         printf("No se pudo abrir el archivo: %s\n", nombreArchivo);
@@ -288,6 +296,9 @@ void mostrarBoletinMensual() {
 
     Map* gastoPorCategoria = map_create(is_equal_string);
     Map* gastoPorSemana = map_create(is_equal_string);
+    Map* detallePorDia = map_create(is_equal_string);
+    List* fechasOrdenadas = list_create();
+
     int totalGastado = 0;
 
     for (int i = 0; i < hashMap.capacidad; i++) {
@@ -301,33 +312,45 @@ void mostrarBoletinMensual() {
                 int valor = nodo->insumo.valor_total;
                 totalGastado += valor;
 
-                // Gasto por categoría
-                if (strlen(nodo->insumo.categoria) > 0) {
-                    void* gastoExistente = map_search(gastoPorCategoria, nodo->insumo.categoria);
-                    int* nuevoGasto = malloc(sizeof(int));
-                    if (gastoExistente) {
-                        *nuevoGasto = *((int*)gastoExistente) + valor;
-                        map_insert(gastoPorCategoria, nodo->insumo.categoria, nuevoGasto);
-                    } else {
-                        *nuevoGasto = valor;
-                        map_insert(gastoPorCategoria, strdup(nodo->insumo.categoria), nuevoGasto);
-                    }
+                // Categoría
+                MapPair* par1 = map_search(gastoPorCategoria, nodo->insumo.categoria);
+                int* gastoExistente = par1 ? (int*)par1->value : NULL;
+
+                if (gastoExistente) {
+                    *gastoExistente += valor;
+                } else {
+                    int* nuevo = malloc(sizeof(int));
+                    *nuevo = valor;
+                    map_insert(gastoPorCategoria, strdup(nodo->insumo.categoria), nuevo);
                 }
 
-                // Gasto por semana
+                // Semana
                 int semana = (fecha_insumo.tm_yday / 7) + 1;
                 char claveSemana[10];
                 sprintf(claveSemana, "S%d", semana);
+                MapPair* par2 = map_search(gastoPorSemana, claveSemana);
+                int* gastoSem = par2 ? (int*)par2->value : NULL;
 
-                void* gastoSemana = map_search(gastoPorSemana, claveSemana);
-                int* nuevoGastoSemanal = malloc(sizeof(int));
-                if (gastoSemana) {
-                    *nuevoGastoSemanal = *((int*)gastoSemana) + valor;
-                    map_insert(gastoPorSemana, claveSemana, nuevoGastoSemanal);
+                if (gastoSem) {
+                    *gastoSem += valor;
                 } else {
-                    *nuevoGastoSemanal = valor;
-                    map_insert(gastoPorSemana, strdup(claveSemana), nuevoGastoSemanal);
+                    int* nuevo = malloc(sizeof(int));
+                    *nuevo = valor;
+                    map_insert(gastoPorSemana, strdup(claveSemana), nuevo);
                 }
+
+                // Detalle por día
+                MapPair* par3 = map_search(detallePorDia, nodo->insumo.fecha);
+                List* lista = par3 ? (List*)par3->value : NULL;
+
+                if (!lista) {
+                    lista = list_create();
+                    map_insert(detallePorDia, strdup(nodo->insumo.fecha), lista);
+                    list_sortedInsert(fechasOrdenadas, strdup(nodo->insumo.fecha), string_lower_than);
+                }
+                Insumo* nuevo = malloc(sizeof(Insumo));
+                *nuevo = nodo->insumo;
+                list_pushBack(lista, nuevo);
             }
             nodo = nodo->siguiente;
         }
@@ -337,39 +360,73 @@ void mostrarBoletinMensual() {
 
     // Top 3 categorías
     printf("\nTop 3 categorías más gastadas:\n");
-    char* topCategorias[3] = {NULL, NULL, NULL};
-    int topGastos[3] = {0};
+    char* topCat[3] = {NULL, NULL, NULL};
+    int topGasto[3] = {0};
 
     MapPair* par = map_first(gastoPorCategoria);
     while (par) {
-        char* cat = (char*)par->key;
-        int gasto = *((int*)par->value);
+        int gasto = *(int*)par->value;
         for (int i = 0; i < 3; i++) {
-            if (gasto > topGastos[i]) {
+            if (gasto > topGasto[i]) {
                 for (int j = 2; j > i; j--) {
-                    topGastos[j] = topGastos[j - 1];
-                    topCategorias[j] = topCategorias[j - 1];
+                    topGasto[j] = topGasto[j-1];
+                    topCat[j] = topCat[j-1];
                 }
-                topGastos[i] = gasto;
-                topCategorias[i] = cat;
+                topGasto[i] = gasto;
+                topCat[i] = par->key;
                 break;
             }
         }
         par = map_next(gastoPorCategoria);
     }
 
-    for (int i = 0; i < 3 && topCategorias[i]; i++) {
-        printf("%d. %s: $%d\n", i + 1, topCategorias[i], topGastos[i]);
-    }
+    for (int i = 0; i < 3 && topCat[i]; i++)
+        printf("%d. %s: $%d\n", i+1, topCat[i], topGasto[i]);
 
     // Gasto por semana
     printf("\nGasto por semana:\n");
     par = map_first(gastoPorSemana);
     while (par) {
-        printf("%s: $%d\n", (char*)par->key, *((int*)par->value));
+        printf("%s: $%d\n", (char*)par->key, *(int*)par->value);
         par = map_next(gastoPorSemana);
     }
+
+    // Gasto detallado
+    printf("\nGasto diario detallado:\n");
+    char mes_actual[20] = "";
+    char* meses[] = {"enero", "febrero", "marzo", "abril", "mayo", "junio",
+                     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"};
+
+    char* fecha = list_first(fechasOrdenadas);
+    while (fecha) {
+        int anio, mes, dia;
+        sscanf(fecha, "%d-%d-%d", &anio, &mes, &dia);
+        const char* nombreMes = meses[mes - 1];
+
+        if (strcmp(mes_actual, nombreMes) != 0) {
+            printf("\n%s:\n", nombreMes);
+            strcpy(mes_actual, nombreMes);
+        }
+
+        MapPair* par4 = map_search(detallePorDia, fecha);
+        if (!par4) {
+            fecha = list_next(fechasOrdenadas);
+            continue;
+        }
+        List* lista = (List*)par4->value;
+
+        Insumo* insumo = list_first(lista);
+        while (insumo) {
+            printf("- El día %d gastaste %d unidad en %s. Valor: $%d\n",
+                dia, insumo->cantidad, insumo->producto, insumo->valor_total);
+            insumo = list_next(lista);
+        }
+
+        fecha = list_next(fechasOrdenadas);
+    }
 }
+
+
 
 
 float predecirGastoSemanal() {

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <time.h> 
 #include "list.h"
 
@@ -36,6 +37,10 @@ typedef struct {
 extern Insumo insumos[MAX_INSUMOS];
 extern int totalInsumos;
 extern HashMap hashMap; 
+
+
+
+int string_lower_than(void *a, void *b);
 
 void mostrarBoletinSemanal();
 void mostrarBoletinMensual();
