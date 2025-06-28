@@ -212,47 +212,20 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
 void mostrarBoletinSemanal() {
     printf("\n--- BOLETÍN SEMANAL ---\n");
 
-    int totalGastado = 0;
-    int maxGasto = 0;
-    char principalInsumo[50] = "";
-
-    // Obtener la fecha actual para comparar con los insumos
+    // Obtener la fecha actual y la de hace 7 días
     time_t t_actual = time(NULL);
-    struct tm *fecha_actual = localtime(&t_actual);
-    fecha_actual->tm_hour = 0; fecha_actual->tm_min = 0; fecha_actual->tm_sec = 0;
-    time_t t_inicio_semana = t_actual - (7 * 24 * 60 * 60); // 7 días atrás
+    struct tm tm_actual = *localtime(&t_actual);
 
-    // Iterar por la tabla de fechas
-    for (int i = 0; i < hashMap.capacidad; i++) {
-        Nodo *nodo_fecha = hashMap.tabla_fecha[i];
-        while (nodo_fecha) {
-            struct tm tm_insumo = {0};
-            strptime(nodo_fecha->insumo.fecha, "%Y-%m-%d", &tm_insumo);
-            time_t t_insumo = mktime(&tm_insumo);
+    char fecha_fin[11], fecha_inicio[11];
+    strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_actual);
 
-            // Comprobar si el insumo está en la semana actual (últimos 7 días)
-            if (t_insumo >= t_inicio_semana && t_insumo <= t_actual) {
-                // Procesar el insumo
-                if (strlen(nodo_fecha->insumo.categoria) == 0) continue; // Evitar insumos sin categoría
-                printf("- %s: %d unidades, $%d\n", nodo_fecha->insumo.categoria, nodo_fecha->insumo.cantidad, nodo_fecha->insumo.valor_total);
-                totalGastado += nodo_fecha->insumo.valor_total;
+    // Retroceder 7 días
+    t_actual -= 7 * 24 * 60 * 60;
+    struct tm tm_inicio = *localtime(&t_actual);
+    strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_inicio);
 
-                // Actualizar el insumo más caro de la semana
-                if (nodo_fecha->insumo.valor_total > maxGasto) {
-                    maxGasto = nodo_fecha->insumo.valor_total;
-                    strcpy(principalInsumo, nodo_fecha->insumo.categoria);
-                }
-            }
-            nodo_fecha = nodo_fecha->siguiente;
-        }
-    }
-
-    // Mostrar los resultados
-    printf("Total gastado esta semana: $%d\n", totalGastado);
-    if (strlen(principalInsumo) > 0)
-        printf("Principal insumo de la semana: %s\n", principalInsumo);
-    else
-        printf("No hay insumos registrados esta semana.\n");
+    // Usar tu función para buscar insumos en el rango de fechas
+    buscarInsumosEnRangoDeFechas(fecha_inicio, fecha_fin);
 }
 
 
