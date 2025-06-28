@@ -12,10 +12,6 @@
 int string_lower_than(void* a, void* b) {
     return strcmp((char*)a, (char*)b) < 0;
 }
-
-
-
-
 int is_equal_string(void *a, void *b) {
     return strcmp((char*)a, (char*)b) == 0;
 }
@@ -531,7 +527,7 @@ void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
 }
 
 void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
-    FILE *archivo = fopen(nombreArchivo, "w");
+    FILE *archivo = fopen(nombreArchivo, "a");
     if (!archivo) return;
     // Puedes escribir cabecera si lo deseas:
     // fprintf(archivo, "fecha,categoria,producto,cantidad,valor_total\n");
