@@ -7,7 +7,7 @@
 typedef struct Pair {
     void* key;
     void* value;
-} MapPair;
+} Pair;
 
 
 
@@ -29,4 +29,4 @@ Map *map_next(Map *map);
 
 void map_clean(Map *map);
 
-#endif /* MAP_H */
+#endif 
