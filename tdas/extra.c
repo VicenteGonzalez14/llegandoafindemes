@@ -1,4 +1,5 @@
 #include "extra.h"
+#include "regresion.h"
 #include "map.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -226,24 +227,12 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
 void mostrarBoletinSemanal() {
     printf("\n--- BOLETÍN SEMANAL ---\n");
     
-    // Obtener la fecha actual y la de hace 7 días
-    time_t t_actual = time(NULL);
-    struct tm tm_actual = *localtime(&t_actual);
-
-    char fecha_fin[11], fecha_inicio[11];
-    strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_actual);
-
-    // Retroceder 7 días
-    t_actual -= 7 * 24 * 60 * 60;
-    struct tm tm_inicio = *localtime(&t_actual);
-    strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_inicio);
-
-    // Convierte fechas a time_t para comparar
     struct tm tm_ini = {0}, tm_fin = {0};
-    strptime(fecha_inicio, "%Y-%m-%d", &tm_ini);
-    strptime(fecha_fin, "%Y-%m-%d", &tm_fin);
+    strptime("2025-05-01", "%Y-%m-%d", &tm_ini);   // Inicio de mayo
+    strptime("2025-07-31", "%Y-%m-%d", &tm_fin);   // Fin de julio
     time_t t_ini = mktime(&tm_ini);
-    time_t t_fin = mktime(&tm_fin);
+    time_t t_fin = mktime(&tm_fin); +86399;
+
 
     char ultimo_mes[20] = "";
     for (int i = 0; i < hashMap.capacidad; i++) {
@@ -298,8 +287,10 @@ void mostrarBoletinSemanal() {
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
 
-    time_t t_actual = time(NULL);
-    struct tm tm_actual = *localtime(&t_actual);
+    struct tm tm_actual = {0};
+    strptime("2025-07-31", "%Y-%m-%d", &tm_actual);
+    time_t t_actual = mktime(&tm_actual);
+
 
     char fecha_fin[11], fecha_inicio[11];
     strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_actual);
@@ -445,69 +436,56 @@ void mostrarBoletinMensual() {
 
         fecha = list_next(fechasOrdenadas);
     }
-}
 
+        // ===== Predicción del gasto para el próximo mes (agosto) usando regresión lineal =====
+    printf("\n\n--- Predicción de gasto para el próximo mes ---\n");
 
+    // Paso 1: Mapear gastos por mes
+    int gastosMensuales[12] = {0}; // Índice 0: enero, 1: febrero, ..., 11: diciembre
 
+    for (int i = 0; i < hashMap.capacidad; i++) {
+        Nodo* nodo = hashMap.tabla_fecha[i];
+        while (nodo) {
+            struct tm fecha_insumo = {0};
+            strptime(nodo->insumo.fecha, "%Y-%m-%d", &fecha_insumo);
+            int mes = fecha_insumo.tm_mon; // 0-based (0=enero)
 
-float predecirGastoSemanal() {
-    // Paso 1: agrupar los gastos semanales
-    int semanasMax = 10;
-    int semanaActual = 0;
-    int gastoSemanal[semanasMax];
-    memset(gastoSemanal, 0, sizeof(gastoSemanal));
-
-    // Obtener la fecha actual
-    time_t t_actual = time(NULL);
-    struct tm *fecha_actual = localtime(&t_actual);
-
-    for (int i = 0; i < totalInsumos; i++) {
-        struct tm fecha = {0};
-        int anio, mes, dia;
-        sscanf(insumos[i].fecha, "%d-%d-%d", &anio, &mes, &dia);
-        fecha.tm_year = anio - 1900;
-        fecha.tm_mon = mes - 1;
-        fecha.tm_mday = dia;
-
-        time_t t_insumo = mktime(&fecha);
-        double dias_diferencia = difftime(t_actual, t_insumo) / (60 * 60 * 24);
-
-        int semana = (int)(dias_diferencia / 7);
-        if (semana < semanasMax)
-            gastoSemanal[semana] += insumos[i].valor_total;
-
-        if (semana > semanaActual)
-            semanaActual = semana;
+            gastosMensuales[mes] += nodo->insumo.valor_total;
+            nodo = nodo->siguiente;
+        }
     }
 
-    // Paso 2: preparar datos para regresión lineal
+    // Paso 2: Llenar arreglos de x (meses) e y (gastos)
+    double x[12], y[12];
     int n = 0;
-    float x[semanasMax], y[semanasMax];
-
-    for (int i = 0; i < semanasMax; i++) {
-        if (gastoSemanal[i] > 0) {
-            x[n] = i + 1;  // semana 1, 2, ...
-            y[n] = gastoSemanal[i];
+    for (int i = 0; i < 12; i++) {
+        if (gastosMensuales[i] > 0) {
+            x[n] = i + 1; // Mes 1 a 12
+            y[n] = gastosMensuales[i];
             n++;
         }
     }
 
-    if (n < 2) return -1; // no hay suficientes datos
+    if (n >= 2) {
+        ModeloLineal modelo = calcular_regresion(x, y, n);
+        double gasto_predicho = modelo.pendiente * (x[n - 1] + 1) + modelo.intercepto;
 
-    // Regresión lineal: y = a*x + b
-    float sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
-    for (int i = 0; i < n; i++) {
-        sum_x += x[i];
-        sum_y += y[i];
-        sum_xy += x[i] * y[i];
-        sum_x2 += x[i] * x[i];
+        // Determinar el nombre del próximo mes
+        const char* meses[] = {"enero", "febrero", "marzo", "abril", "mayo", "junio",
+                               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"};
+        int siguiente_mes = (int)x[n - 1]; // x[n-1] ya es el número de mes actual (1-12)
+        if (siguiente_mes < 12) siguiente_mes++;
+        const char* mes_predicho = meses[siguiente_mes - 1]; // 0-indexado
+
+
+        printf("Según el análisis de tus últimos %d meses, se predice un gasto de $%.0f para %s.\n",
+               n, gasto_predicho, mes_predicho);
+    } else {
+        printf("No hay suficiente historial para hacer una predicción.\n");
     }
 
-    float a = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-    float b = (sum_y - a * sum_x) / n;
+      
 
-    float siguiente_semana = x[n - 1] + 1;
-    return a * siguiente_semana + b;
 }
 
 
