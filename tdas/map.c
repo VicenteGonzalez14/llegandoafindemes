@@ -18,7 +18,7 @@ int pair_lt(void *pair1, void *pair2) {
   return (current_lt(((MapPair *)pair1)->key, ((MapPair *)pair2)->key));
 }
 
-MapPair *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
+Map *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
   Map *newMap = (Map *)malloc(sizeof(Map));
   newMap->lower_than = lower_than;
   newMap->is_equal = NULL;
@@ -27,7 +27,7 @@ MapPair *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
   return newMap;
 }
 
-MapPair *map_create(int (*is_equal)(void *key1, void *key2)) {
+Map *map_create(int (*is_equal)(void *key1, void *key2)) {
   Map *newMap = (Map *)malloc(sizeof(Map));
   newMap->lower_than = NULL;
   newMap->is_equal = is_equal;
@@ -60,7 +60,7 @@ int _is_equal(Map *map, MapPair *pair, void *key) {
            !map->lower_than(key, pair->key)));
 }
 
-MapPair *map_remove(Map *map, void *key) {
+Map *map_remove(Map *map, void *key) {
   for (MapPair *pair = list_first(map->ls); pair != NULL;
        pair = list_next(map->ls))
     if (_is_equal(map, pair, key)) {
@@ -70,8 +70,8 @@ MapPair *map_remove(Map *map, void *key) {
   return NULL;
 }
 
-MapPair *map_search(Map *map, void *key) {
-  for (MapPair *pair = list_first(map->ls); pair != NULL;
+Map *map_search(Map *map, void *key) {
+  for (Map *pair = list_first(map->ls); pair != NULL;
        pair = list_next(map->ls)) {
     if (_is_equal(map, pair, key))
       return pair;
@@ -79,8 +79,8 @@ MapPair *map_search(Map *map, void *key) {
   return NULL;
 }
 
-MapPair *map_first(Map *map) { return list_first(map->ls); }
+Map *map_first(Map *map) { return list_first(map->ls); }
 
-MapPair *map_next(Map *map) { return list_next(map->ls); }
+Map *map_next(Map *map) { return list_next(map->ls); }
 
 void map_clean(Map *map) { list_clean(map->ls); }
