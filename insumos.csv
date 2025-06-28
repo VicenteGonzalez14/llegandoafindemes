@@ -1,3 +1,8 @@
+2025-05-17,Alimentos,dulce,1,800
+2025-05-18,Alimentos,pan,1,2000
+2025-05-19,Alimentos,queso,1,5000
+2025-05-22,Mascotas,correa de perro,1,12000
+2025-05-24,Alimentos,agua,1,500
 2025-05-25,Alimentos,arroz,1,3000
 2025-05-24,Vestimenta,polera,1,25000
 2025-05-26,Alimentos,leche,1,1500
@@ -7,8 +12,13 @@
 2025-05-19,Alimentos,pollo,1,20000
 2025-05-20,Alimentos,ensalada,1,5000
 2025-05-20,Higiene,shampoo,1,7000
+2025-05-20,Higiene,jabon,1,5000
 2025-05-23,Mascotas,Comida de perro,1,35000
+2025-05-24,Alimentos,carne molida,1,15000
+2025-05-25,Tecnologia,mouse,1,20000
 2025-05-17,Mascotas,Casa de perro,1,125000
+2025-05-18,Vestimenta,camiseta,1,20000
+2025-05-19,Tecnologia,teclado,1,30000
 2025-05-17,Mascotas,Casa perro,1,150000
 2025-05-21,Higiene,Papel Higienico,8,6000
 2025-05-22,Alimentos,Carne,2,40000
@@ -17,8 +27,11 @@
 2025-06-15,Electrodomesticos,microondas,1,100000
 2025-06-16,Tecnologia,reloj inteligente,1,200000
 2025-05-17,Higiene,confort,1,1000
+2025-05-18,Tecnologia,audifonos,1,2500
 2025-05-12,Alimentos,chocolate,2,4000
+2025-05-13,Mascotas,churu,1,3000
 2025-05-23,Tecnologia,cargador,1,10000
+2025-06-01,Alimentos,galletas,1,2500
 2025-06-11,Mascotas,juguete para perro,1,5000
 2025-06-16,Vestimenta,polera,1,15000
 2025-07-01, Alimentos, Yogur,3,1200
@@ -71,5 +84,3 @@
 2025-07-23, Alimentos, Lechuga,3,1200
 2025-07-24, Electrodomesticos, Ventilador,1,20000
 2025-07-25, Alimentos, Naranjas,2,1800
-2025-05-06,Higiene,JABON,2,4000
-2025-06-27,Alimentos,manzana,2,1000
