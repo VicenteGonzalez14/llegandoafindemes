@@ -311,7 +311,7 @@ int main() {
         printf("\n--- MENU PRINCIPAL ---\n");
         printf("1. Cargar dinero a la billetera\n");
         printf("2. Agregar insumo\n");
-        printf("3. Mostrar boletin semanal\n");
+        printf("3. Mostrar boletines semanales\n");
         printf("4. Mostrar boletin mensual\n");
         printf("5. Salir\n");
         printf("Seleccione una opcion: ");
