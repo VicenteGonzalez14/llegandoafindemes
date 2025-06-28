@@ -226,54 +226,36 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
 void mostrarBoletinSemanal() {
     printf("\n--- BOLETÍN SEMANAL (agrupado por semana) ---\n");
 
-    // Obtener la fecha actual y la de hace 7 días
-    time_t t_actual = time(NULL);
-    struct tm tm_actual = *localtime(&t_actual);
+    // Creamos un arreglo para marcar qué semanas ya imprimimos (hasta 54 semanas por año)
+    int semanas_impresas[54] = {0};
 
-    char fecha_fin[11], fecha_inicio[11];
-    strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_actual);
+    for (int semana = 1; semana <= 53; semana++) {
+        int encontrados = 0;
+        // Recorremos toda la tabla hash de fechas
+        for (int i = 0; i < hashMap.capacidad; i++) {
+            Nodo *nodo = hashMap.tabla_fecha[i];
+            while (nodo) {
+                struct tm tm_insumo = {0};
+                strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
+                int semana_insumo = tm_insumo.tm_yday / 7 + 1;
 
-    // Retroceder 7 días
-    t_actual -= 7 * 24 * 60 * 60;
-    struct tm tm_inicio = *localtime(&t_actual);
-    strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_inicio);
+                if (semana_insumo == semana) {
+                    if (!semanas_impresas[semana]) {
+                        printf("\nSemana %d:\n", semana);
+                        semanas_impresas[semana] = 1;
+                    }
+                    encontrados++;
+                    char mes_nombre[20];
+                    strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
 
-    // Convierte fechas a time_t para comparar
-    struct tm tm_ini = {0}, tm_fin = {0};
-    strptime(fecha_inicio, "%Y-%m-%d", &tm_ini);
-    strptime(fecha_fin, "%Y-%m-%d", &tm_fin);
-    time_t t_ini = mktime(&tm_ini);
-    time_t t_fin = mktime(&tm_fin);
-
-    // Suponiendo que solo mostrarás insumos de la semana actual
-    int semana_actual = tm_ini.tm_yday / 7 + 1;
-    int encontrados = 0;
-
-    printf("Semana %d:\n", semana_actual);
-
-    for (int i = 0; i < hashMap.capacidad; i++) {
-        Nodo *nodo = hashMap.tabla_fecha[i];
-        while (nodo) {
-            struct tm tm_insumo = {0};
-            strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
-            time_t t_insumo = mktime(&tm_insumo);
-
-            int semana_insumo = tm_insumo.tm_yday / 7 + 1;
-
-            if (t_insumo >= t_ini && t_insumo <= t_fin && semana_insumo == semana_actual) {
-                encontrados++;
-                char mes_nombre[20];
-                strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
-
-                printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
-                    tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
+                    printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
+                        tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
+                }
+                nodo = nodo->siguiente;
             }
-            nodo = nodo->siguiente;
         }
-    }
-
-    if (encontrados == 0) {
-        printf("No hay insumos registrados en la semana actual.\n");
+        // Si quieres mostrar semanas sin insumos, puedes descomentar esto:
+        // if (!encontrados) printf("\nSemana %d:\n  No hay insumos registrados.\n", semana);
     }
 }
 
@@ -491,7 +473,6 @@ float predecirGastoSemanal() {
     float siguiente_semana = x[n - 1] + 1;
     return a * siguiente_semana + b;
 }
-
 
 // Función para limpiar la pantalla
 void limpiarPantalla() { system("clear"); }
