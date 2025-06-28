@@ -27,3 +27,5 @@ fecha,categoria,producto,cantidad,costo_total,dia,mes,dia_semana,costo_predicho
 2025-06-06,Higiene,cepillo,1,1200.0,,,,
 2025-06-28,Alimentos,carne,2,40000.0,,,,
 2025-05-05,Higiene,cepillo dental,1,1000.0,,,,
+2025-06-27,Tecnología,cargador celular,1,2500.0,,,,
+2025-06-27,Higiene,Cepillo para perros,1,2500.0,,,,
