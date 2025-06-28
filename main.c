@@ -201,25 +201,11 @@ void agregarInsumo() {
 }
 
 // Funciones getter para cada tipo de clave
-const char* obtenerFecha(Insumo insumo) {
-    return insumo.fecha;
-}
-
-const char* obtenerCategoria(Insumo insumo) {
-    return insumo.categoria;
-}
-
-const char* obtenerProducto(Insumo insumo) {
-    return insumo.producto;
-}
-
-int obtenerCantidad(Insumo insumo) {
-    return insumo.cantidad;
-}
-
-int obtenerValorTotal(Insumo insumo) {
-    return insumo.valor_total;
-}
+const char* obtenerFecha(const Insumo* insumo) {return insumo->fecha; }
+const char* obtenerCategoria(const Insumo* insumo) { return insumo->categoria; }
+const char* obtenerProducto(const Insumo* insumo) { return insumo->producto; }
+int obtenerCantidad(const Insumo* insumo) { return insumo->cantidad; }
+int obtenerValorTotal(const Insumo* insumo) { return insumo->valor_total; }
 
 // Función para liberar la memoria de la tabla hash
 void liberarTabla(Nodo **tabla, int capacidad) {
@@ -272,11 +258,11 @@ void redimensionarHashMap(HashMap *mapa, int nueva_capacidad) {
 }
 
 // Rehashing para tablas de tipo string
-void rehashTablaStr(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(const char*), const char* (*obtenerClave)(Insumo)) {
+void rehashTablaStr(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(const char*), const char* (*obtenerClave)(const Insumo*)) {
     for (int i = 0; i < capacidadVieja; i++) {
         Nodo* actual = tablaVieja[i];
         while (actual) {
-            const char* clave = obtenerClave(actual->insumo);  
+            const char* clave = obtenerClave(&actual->insumo);
             unsigned int idx = func_hash(clave) % nueva_capacidad;
             Nodo* nuevoNodo = malloc(sizeof(Nodo));
             nuevoNodo->insumo = actual->insumo;
@@ -288,11 +274,11 @@ void rehashTablaStr(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, in
 }
 
 // Rehashing para tablas de tipo int
-void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(int), int (*obtenerClave)(Insumo)) {
+void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(int), int (*obtenerClave)(const Insumo*)) {
     for (int i = 0; i < capacidadVieja; i++) {
         Nodo* actual = tablaVieja[i];
         while (actual) {
-            int clave = obtenerClave(actual->insumo);  
+            int clave = obtenerClave(&actual->insumo);
             unsigned int idx = func_hash(clave) % nueva_capacidad;
             Nodo* nuevoNodo = malloc(sizeof(Nodo));
             nuevoNodo->insumo = actual->insumo;
@@ -352,3 +338,5 @@ int main() {
 
     return 0;
 }
+
+

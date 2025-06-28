@@ -2,6 +2,7 @@
     "files.associations": {
         "list.h": "c",
         "extra.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "functional": "c"
     }
 }
