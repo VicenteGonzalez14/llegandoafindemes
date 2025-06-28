@@ -217,7 +217,7 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
 
 void mostrarBoletinSemanal() {
     printf("\n--- BOLETÍN SEMANAL ---\n");
-
+    
     // Obtener la fecha actual y la de hace 7 días
     time_t t_actual = time(NULL);
     struct tm tm_actual = *localtime(&t_actual);
@@ -259,6 +259,27 @@ void mostrarBoletinSemanal() {
                 // Imprimir insumo en formato solicitado
                 printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
                     tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
+            }
+            nodo = nodo->siguiente;
+        }
+    }
+    char categorias_mostradas[100][50];
+    int categorias_count = 0;
+
+    for (int i = 0; i < hashMap.capacidad; i++) {
+        Nodo *nodo = hashMap.tabla_categoria[i];
+        while (nodo) {
+            int ya_mostrada = 0;
+            for (int j = 0; j < categorias_count; j++) {
+                if (strcmp(categorias_mostradas[j], nodo->insumo.categoria) == 0) {
+                    ya_mostrada = 1;
+                    break;
+                }
+            }
+            if (!ya_mostrada) {
+                strcpy(categorias_mostradas[categorias_count++], nodo->insumo.categoria);
+                printf("\n--- Insumos de la categoría '%s' esta semana ---\n", nodo->insumo.categoria);
+                buscarInsumosPorCategoria(nodo->insumo.categoria);
             }
             nodo = nodo->siguiente;
         }
