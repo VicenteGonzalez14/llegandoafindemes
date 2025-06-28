@@ -263,65 +263,73 @@ void mostrarBoletinSemanal() {
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
 
+    time_t t_actual = time(NULL);
+    struct tm tm_actual = *localtime(&t_actual);
+
+    char fecha_fin[11], fecha_inicio[11];
+    strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_actual);
+
+    // Retroceder 30 días
+    t_actual -= 30 * 24 * 60 * 60;
+    struct tm tm_inicio = *localtime(&t_actual);
+    strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_inicio);
+
+    struct tm tm_ini = {0}, tm_fin = {0};
+    strptime(fecha_inicio, "%Y-%m-%d", &tm_ini);
+    strptime(fecha_fin, "%Y-%m-%d", &tm_fin);
+    time_t t_ini = mktime(&tm_ini);
+    time_t t_fin = mktime(&tm_fin);
+
     Map* gastoPorCategoria = createMap(is_equal_string);
     Map* gastoPorSemana = createMap(is_equal_string);
     int totalGastado = 0;
 
+    for (int i = 0; i < hashMap.capacidad; i++) {
+        Nodo *nodo = hashMap.tabla_fecha[i];
+        while (nodo) {
+            struct tm fecha_insumo = {0};
+            strptime(nodo->insumo.fecha, "%Y-%m-%d", &fecha_insumo);
+            time_t t_insumo = mktime(&fecha_insumo);
 
-    for (int i = 0; i < totalInsumos; i++) {
-        if (estaEnUltimosNDias(insumos[i].fecha, 30)) {
-            if (strlen(insumos[i].categoria) == 0) continue;
+            if (t_insumo >= t_ini && t_insumo <= t_fin) {
+                int valor = nodo->insumo.valor_total;
+                totalGastado += valor;
 
-            printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valor_total);
-            totalGastado += insumos[i].valor_total;
+                // Gasto por categoría
+                if (strlen(nodo->insumo.categoria) > 0) {
+                    void* gastoExistente = searchMap(gastoPorCategoria, nodo->insumo.categoria);
+                    int* nuevoGasto = malloc(sizeof(int));
+                    if (gastoExistente) {
+                        *nuevoGasto = *((int*)gastoExistente) + valor;
+                        insertMap(gastoPorCategoria, nodo->insumo.categoria, nuevoGasto);
+                    } else {
+                        *nuevoGasto = valor;
+                        insertMap(gastoPorCategoria, strdup(nodo->insumo.categoria), nuevoGasto);
+                    }
+                }
 
-            // --- Acumular gasto por categoría ---
-            void* gastoExistente = searchMap(gastoPorCategoria, insumos[i].categoria);
-            int* nuevoGasto = malloc(sizeof(int));
-            if (gastoExistente) {
-                *nuevoGasto = *((int*)gastoExistente) + insumos[i].valor_total;
-                insertMap(gastoPorCategoria, insumos[i].categoria, nuevoGasto);
-            } else {
-                *nuevoGasto = insumos[i].valor_total;
-                insertMap(gastoPorCategoria, strdup(insumos[i].categoria), nuevoGasto);
+                // Gasto por semana
+                int semana = (fecha_insumo.tm_yday / 7) + 1;
+                char claveSemana[10];
+                sprintf(claveSemana, "S%d", semana);
+
+                void* gastoSemana = searchMap(gastoPorSemana, claveSemana);
+                int* nuevoGastoSemanal = malloc(sizeof(int));
+                if (gastoSemana) {
+                    *nuevoGastoSemanal = *((int*)gastoSemana) + valor;
+                    insertMap(gastoPorSemana, claveSemana, nuevoGastoSemanal);
+                } else {
+                    *nuevoGastoSemanal = valor;
+                    insertMap(gastoPorSemana, strdup(claveSemana), nuevoGastoSemanal);
+                }
             }
-
-            // --- Acumular gasto por semana ---
-            struct tm fecha = {0};
-            int anio, mes, dia;
-            sscanf(insumos[i].fecha, "%d-%d-%d", &anio, &mes, &dia);
-            fecha.tm_year = anio - 1900;
-            fecha.tm_mon = mes - 1;
-            fecha.tm_mday = dia;
-            mktime(&fecha);
-            int semana = (fecha.tm_yday / 7) + 1;
-            char claveSemana[10];
-            sprintf(claveSemana, "S%d", semana);
-
-            void* gastoSemana = searchMap(gastoPorSemana, claveSemana);
-            int* nuevoGastoSemanal = malloc(sizeof(int));
-            if (gastoSemana) {
-                *nuevoGastoSemanal = *((int*)gastoSemana) + insumos[i].valor_total;
-                insertMap(gastoPorSemana, claveSemana, nuevoGastoSemanal);
-            } else {
-                *nuevoGastoSemanal = insumos[i].valor_total;
-                insertMap(gastoPorSemana, strdup(claveSemana), nuevoGastoSemanal);
-            }
+            nodo = nodo->siguiente;
         }
     }
 
     printf("\nTotal gastado en los últimos 30 días: $%d\n", totalGastado);
 
-    // Matriz para predicción (máx. 6 semanas)
-    int semanaActual = 1;
-    int semanas[6] = {0};
-    int gastosPorSemana[6] = {0};
-    int semanaGastos[6] = {0};
-    int contadorSemanas = 0;
-
-
-
-    // --- Mostrar top 3 categorías ---
+    // Top 3 categorías
     printf("\nTop 3 categorías más gastadas:\n");
     char* topCategorias[3] = {NULL, NULL, NULL};
     int topGastos[3] = {0};
@@ -330,7 +338,6 @@ void mostrarBoletinMensual() {
     while (par) {
         char* cat = (char*)par->key;
         int gasto = *((int*)par->value);
-
         for (int i = 0; i < 3; i++) {
             if (gasto > topGastos[i]) {
                 for (int j = 2; j > i; j--) {
@@ -349,16 +356,15 @@ void mostrarBoletinMensual() {
         printf("%d. %s: $%d\n", i + 1, topCategorias[i], topGastos[i]);
     }
 
-    // --- Mostrar gastos por semana ---
+    // Gasto por semana
     printf("\nGasto por semana:\n");
     par = firstMap(gastoPorSemana);
     while (par) {
         printf("%s: $%d\n", (char*)par->key, *((int*)par->value));
         par = nextMap(gastoPorSemana);
     }
-
-    // No olvides liberar la memoria (si tu proyecto lo requiere)
 }
+
 
 float predecirGastoSemanal() {
     // Paso 1: agrupar los gastos semanales
