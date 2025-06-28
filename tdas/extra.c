@@ -224,8 +224,39 @@ void mostrarBoletinSemanal() {
     struct tm tm_inicio = *localtime(&t_actual);
     strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_inicio);
 
-    // Usar tu función para buscar insumos en el rango de fechas
-    buscarInsumosEnRangoDeFechas(fecha_inicio, fecha_fin);
+    // Convierte fechas a time_t para comparar
+    struct tm tm_ini = {0}, tm_fin = {0};
+    strptime(fecha_inicio, "%Y-%m-%d", &tm_ini);
+    strptime(fecha_fin, "%Y-%m-%d", &tm_fin);
+    time_t t_ini = mktime(&tm_ini);
+    time_t t_fin = mktime(&tm_fin);
+
+    char ultimo_mes[20] = "";
+    for (int i = 0; i < hashMap.capacidad; i++) {
+        Nodo *nodo = hashMap.tabla_fecha[i];
+        while (nodo) {
+            struct tm tm_insumo = {0};
+            strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
+            time_t t_insumo = mktime(&tm_insumo);
+
+            if (t_insumo >= t_ini && t_insumo <= t_fin) {
+                // Formatear mes y día en español
+                char mes_nombre[20];
+                strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
+
+                // Imprimir el mes solo si cambia
+                if (strcmp(ultimo_mes, mes_nombre) != 0) {
+                    printf("%s:\n", mes_nombre);
+                    strcpy(ultimo_mes, mes_nombre);
+                }
+
+                // Imprimir insumo en formato solicitado
+                printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
+                    tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
+            }
+            nodo = nodo->siguiente;
+        }
+    }
 }
 
 
