@@ -526,7 +526,6 @@ void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
     fclose(archivo);
 }
 
-
 // Función para verificar si el insumo ya está en el HashMap
 int existeInsumoEnHashMap(Insumo insumo) {
     // Buscar en la tabla 'fecha' del HashMap
