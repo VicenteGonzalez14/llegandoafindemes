@@ -1,4 +1,8 @@
 #include "extra.h"
+#include "map.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
@@ -184,101 +188,92 @@ void mostrarBoletinSemanal() {
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
 
-    typedef struct {
-        char categoria[50];
-        int gasto;
-    } TopInsumo;
-
-    TopInsumo top3[3] = {{"", 0}, {"", 0}, {"", 0}};
+    Map* gastoPorCategoria = createMap(is_equal_string);
+    Map* gastoPorSemana = createMap(is_equal_string);
     int totalGastado = 0;
-
-    // Matriz para predicción (máx. 6 semanas)
-    int semanaActual = 1;
-    int semanas[6] = {0};
-    int gastosPorSemana[6] = {0};
-    int semanaGastos[6] = {0};
-    int contadorSemanas = 0;
 
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 30)) {
-            if (strlen(insumos[i].categoria) == 0) continue; // Evitar insumos sin categoría
+            if (strlen(insumos[i].categoria) == 0) continue;
+
             printf("- %s: %d unidades, $%d\n", insumos[i].categoria, insumos[i].cantidad, insumos[i].valor_total);
             totalGastado += insumos[i].valor_total;
 
-            // Top 3
-            int encontrado = 0;
-            for (int j = 0; j < 3; j++) {
-                if (strcmp(top3[j].categoria, insumos[i].categoria) == 0) {
-                    top3[j].gasto += insumos[i].valor_total;
-                    encontrado = 1;
-                    break;
-                }
-            }
-            if (!encontrado) {
-                int minIdx = 0;
-                for (int j = 1; j < 3; j++) {
-                    if (top3[j].gasto < top3[minIdx].gasto)
-                        minIdx = j;
-                }
-                if (insumos[i].valor_total > top3[minIdx].gasto) {
-                    strcpy(top3[minIdx].categoria, insumos[i].categoria);
-                    top3[minIdx].gasto = insumos[i].valor_total;
-                }
+            // --- Acumular gasto por categoría ---
+            void* gastoExistente = searchMap(gastoPorCategoria, insumos[i].categoria);
+            int* nuevoGasto = malloc(sizeof(int));
+            if (gastoExistente) {
+                *nuevoGasto = *((int*)gastoExistente) + insumos[i].valor_total;
+                insertMap(gastoPorCategoria, insumos[i].categoria, nuevoGasto);
+            } else {
+                *nuevoGasto = insumos[i].valor_total;
+                insertMap(gastoPorCategoria, strdup(insumos[i].categoria), nuevoGasto);
             }
 
-            // Agrupar gasto semanalmente (muy simple: 7 días por bloque)
-            int diasDesdeHoy = estaEnUltimosNDias(insumos[i].fecha, 30); // Reutiliza días para estimar semana
-            int semana = (30 - diasDesdeHoy) / 7;
+            // --- Acumular gasto por semana ---
+            struct tm fecha = {0};
+            int anio, mes, dia;
+            sscanf(insumos[i].fecha, "%d-%d-%d", &anio, &mes, &dia);
+            fecha.tm_year = anio - 1900;
+            fecha.tm_mon = mes - 1;
+            fecha.tm_mday = dia;
+            mktime(&fecha);
+            int semana = (fecha.tm_yday / 7) + 1;
+            char claveSemana[10];
+            sprintf(claveSemana, "S%d", semana);
 
-            if (semana >= 0 && semana < 6) {
-                gastosPorSemana[semana] += insumos[i].valor_total;
-                semanaGastos[semana] = 1;
+            void* gastoSemana = searchMap(gastoPorSemana, claveSemana);
+            int* nuevoGastoSemanal = malloc(sizeof(int));
+            if (gastoSemana) {
+                *nuevoGastoSemanal = *((int*)gastoSemana) + insumos[i].valor_total;
+                insertMap(gastoPorSemana, claveSemana, nuevoGastoSemanal);
+            } else {
+                *nuevoGastoSemanal = insumos[i].valor_total;
+                insertMap(gastoPorSemana, strdup(claveSemana), nuevoGastoSemanal);
             }
         }
     }
 
-    printf("Total gastado este mes: $%d\n", totalGastado);
-    printf("Top 3 insumos del mes:\n");
-    for (int i = 0; i < 3; i++) {
-        if (top3[i].gasto > 0)
-            printf("• %s: $%d\n", top3[i].categoria, top3[i].gasto);
-    }
+    printf("\nTotal gastado en los últimos 30 días: $%d\n", totalGastado);
 
-    // --- REGRESIÓN LINEAL PREDICTIVA ---
-    // Construir arrays de semanas y gastos
-    int x[6], y[6], n = 0;
-    for (int i = 0; i < 6; i++) {
-        if (semanaGastos[i]) {
-            x[n] = i + 1;
-            y[n] = gastosPorSemana[i];
-            n++;
+    // --- Mostrar top 3 categorías ---
+    printf("\nTop 3 categorías más gastadas:\n");
+    char* topCategorias[3] = {NULL, NULL, NULL};
+    int topGastos[3] = {0};
+
+    Pair* par = firstMap(gastoPorCategoria);
+    while (par) {
+        char* cat = (char*)par->key;
+        int gasto = *((int*)par->value);
+
+        for (int i = 0; i < 3; i++) {
+            if (gasto > topGastos[i]) {
+                for (int j = 2; j > i; j--) {
+                    topGastos[j] = topGastos[j - 1];
+                    topCategorias[j] = topCategorias[j - 1];
+                }
+                topGastos[i] = gasto;
+                topCategorias[i] = cat;
+                break;
+            }
         }
+        par = nextMap(gastoPorCategoria);
     }
 
-    if (n >= 2) { // se necesita al menos 2 semanas para estimar
-        int sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
-        for (int i = 0; i < n; i++) {
-            sum_x += x[i];
-            sum_y += y[i];
-            sum_xy += x[i] * y[i];
-            sum_x2 += x[i] * x[i];
-        }
-
-        float a = (n * sum_xy - sum_x * sum_y) * 1.0 / (n * sum_x2 - sum_x * sum_x);
-        float b = (sum_y - a * sum_x) / n;
-
-        float prediccion = a * (x[n-1] + 1) + b;
-
-        printf("\nPredicción de gasto para la próxima semana: $%.0f\n", prediccion);
-        if (prediccion > 25000)
-            printf("Advertencia: tu ritmo de gasto es elevado.\n");
-        else
-            printf("Estás gastando a un ritmo moderado.\n");
-    } else {
-        printf("\nNo hay suficientes datos para predecir el gasto semanal.\n");
+    for (int i = 0; i < 3 && topCategorias[i]; i++) {
+        printf("%d. %s: $%d\n", i + 1, topCategorias[i], topGastos[i]);
     }
+
+    // --- Mostrar gastos por semana ---
+    printf("\nGasto por semana:\n");
+    par = firstMap(gastoPorSemana);
+    while (par) {
+        printf("%s: $%d\n", (char*)par->key, *((int*)par->value));
+        par = nextMap(gastoPorSemana);
+    }
+
+    // No olvides liberar la memoria (si tu proyecto lo requiere)
 }
-
 
 float predecirGastoSemanal() {
     // Paso 1: agrupar los gastos semanales
@@ -376,4 +371,8 @@ void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
                 insumos[i].valor_total);
     }
     fclose(archivo);
+}
+
+int is_equal_string(void* key1, void* key2) {
+    return strcmp((char*)key1, (char*)key2) == 0;
 }
