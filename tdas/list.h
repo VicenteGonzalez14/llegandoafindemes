@@ -40,4 +40,4 @@ void list_sortedInsert(List *L, void *data,
 
 int list_size(List* L);
 
-#endif
+#endif // LIST_H

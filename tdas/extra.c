@@ -7,6 +7,12 @@
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
 
+
+
+int is_equal_string(void *a, void *b) {
+    return strcmp((char*)a, (char*)b) == 0;
+}
+
 char **leer_linea_csv(FILE *archivo, char separador) {
     static char linea[MAX_LINE_LENGTH];
     static char *campos[MAX_FIELDS];
@@ -280,8 +286,8 @@ void mostrarBoletinMensual() {
     time_t t_ini = mktime(&tm_ini);
     time_t t_fin = mktime(&tm_fin);
 
-    Map* gastoPorCategoria = createMap(is_equal_string);
-    Map* gastoPorSemana = createMap(is_equal_string);
+    Map* gastoPorCategoria = map_create(is_equal_string);
+    Map* gastoPorSemana = map_create(is_equal_string);
     int totalGastado = 0;
 
     for (int i = 0; i < hashMap.capacidad; i++) {
@@ -297,14 +303,14 @@ void mostrarBoletinMensual() {
 
                 // Gasto por categoría
                 if (strlen(nodo->insumo.categoria) > 0) {
-                    void* gastoExistente = searchMap(gastoPorCategoria, nodo->insumo.categoria);
+                    void* gastoExistente = map_search(gastoPorCategoria, nodo->insumo.categoria);
                     int* nuevoGasto = malloc(sizeof(int));
                     if (gastoExistente) {
                         *nuevoGasto = *((int*)gastoExistente) + valor;
-                        insertMap(gastoPorCategoria, nodo->insumo.categoria, nuevoGasto);
+                        map_insert(gastoPorCategoria, nodo->insumo.categoria, nuevoGasto);
                     } else {
                         *nuevoGasto = valor;
-                        insertMap(gastoPorCategoria, strdup(nodo->insumo.categoria), nuevoGasto);
+                        map_insert(gastoPorCategoria, strdup(nodo->insumo.categoria), nuevoGasto);
                     }
                 }
 
@@ -313,14 +319,14 @@ void mostrarBoletinMensual() {
                 char claveSemana[10];
                 sprintf(claveSemana, "S%d", semana);
 
-                void* gastoSemana = searchMap(gastoPorSemana, claveSemana);
+                void* gastoSemana = map_search(gastoPorSemana, claveSemana);
                 int* nuevoGastoSemanal = malloc(sizeof(int));
                 if (gastoSemana) {
                     *nuevoGastoSemanal = *((int*)gastoSemana) + valor;
-                    insertMap(gastoPorSemana, claveSemana, nuevoGastoSemanal);
+                    map_insert(gastoPorSemana, claveSemana, nuevoGastoSemanal);
                 } else {
                     *nuevoGastoSemanal = valor;
-                    insertMap(gastoPorSemana, strdup(claveSemana), nuevoGastoSemanal);
+                    map_insert(gastoPorSemana, strdup(claveSemana), nuevoGastoSemanal);
                 }
             }
             nodo = nodo->siguiente;
@@ -334,7 +340,7 @@ void mostrarBoletinMensual() {
     char* topCategorias[3] = {NULL, NULL, NULL};
     int topGastos[3] = {0};
 
-    MapPair* par = firstMap(gastoPorCategoria);
+    MapPair* par = map_first(gastoPorCategoria);
     while (par) {
         char* cat = (char*)par->key;
         int gasto = *((int*)par->value);
@@ -349,7 +355,7 @@ void mostrarBoletinMensual() {
                 break;
             }
         }
-        par = nextMap(gastoPorCategoria);
+        par = map_next(gastoPorCategoria);
     }
 
     for (int i = 0; i < 3 && topCategorias[i]; i++) {
@@ -358,10 +364,10 @@ void mostrarBoletinMensual() {
 
     // Gasto por semana
     printf("\nGasto por semana:\n");
-    par = firstMap(gastoPorSemana);
+    par = map_first(gastoPorSemana);
     while (par) {
         printf("%s: $%d\n", (char*)par->key, *((int*)par->value));
-        par = nextMap(gastoPorSemana);
+        par = map_next(gastoPorSemana);
     }
 }
 
@@ -464,6 +470,3 @@ void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
     fclose(archivo);
 }
 
-int is_equal_string(void* key1, void* key2) {
-    return strcmp((char*)key1, (char*)key2) == 0;
-}
