@@ -291,8 +291,8 @@ void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, in
 
 int main() {
     setlocale(LC_ALL, "");
-    cargarDatasetDesdeCSV("insumos.csv"); // Carga los insumos al iniciar
 
+    // Inicializa las tablas hash y contadores ANTES de cargar el dataset
     hashMap.tabla_fecha = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
     hashMap.tabla_categoria = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
     hashMap.tabla_producto = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
@@ -300,6 +300,10 @@ int main() {
     hashMap.tabla_valor_total = calloc(HASHMAP_INICIAL, sizeof(Nodo*));
     hashMap.capacidad = HASHMAP_INICIAL;
     hashMap.elementos = 0;
+    saldo = 0;
+    totalInsumos = 0;
+
+    cargarDatasetDesdeCSV("insumos.csv"); // Carga los insumos al iniciar
 
     int opcion;
 
