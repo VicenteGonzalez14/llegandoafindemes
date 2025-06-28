@@ -13,10 +13,6 @@
 int string_lower_than(void* a, void* b) {
     return strcmp((char*)a, (char*)b) < 0;
 }
-
-
-
-
 int is_equal_string(void *a, void *b) {
     return strcmp((char*)a, (char*)b) == 0;
 }
@@ -510,19 +506,57 @@ void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
     fclose(archivo);
 }
 
+
 void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
-    FILE *archivo = fopen(nombreArchivo, "w");
-    if (!archivo) return;
-    // Puedes escribir cabecera si lo deseas:
-    // fprintf(archivo, "fecha,categoria,producto,cantidad,valor_total\n");
+    FILE *archivo = fopen(nombreArchivo, "a"); // Usamos "a" para agregar insumos nuevos
+    if (!archivo) {
+        return;  // No se pudo abrir el archivo para escritura
+    }
+
+    // Abrir archivo en modo lectura para verificar duplicados
+    FILE *archivoLectura = fopen(nombreArchivo, "r");
+    if (!archivoLectura) {
+        fclose(archivo);
+        return;  // No se pudo abrir el archivo para lectura
+    }
+
+    char linea[255];
+    char *fecha, *categoria, *producto;
+    int cantidad, valor_total;
+
+    // Leer el archivo y verificar si el insumo ya está en el archivo
+    while (fgets(linea, sizeof(linea), archivoLectura)) {
+        // Compara el insumo con los que ya están en el archivo
+        sscanf(linea, "%s,%s,%s,%d,%d", fecha, categoria, producto, &cantidad, &valor_total);
+
+        // Compara con los insumos en memoria (hashMap)
+        for (int i = 0; i < totalInsumos; i++) {
+            if (strcmp(insumos[i].fecha, fecha) == 0 && 
+                strcmp(insumos[i].categoria, categoria) == 0 && 
+                strcmp(insumos[i].producto, producto) == 0) {
+                // Si el insumo ya está en el archivo, no lo agregamos
+                fclose(archivoLectura);
+                fclose(archivo);
+                return;
+            }
+        }
+    }
+
     for (int i = 0; i < totalInsumos; i++) {
-        fprintf(archivo, "%s,%s,%s,%d,%d\n",
+        fprintf(archivo, "%s,%s,%s,%d,%d\n", 
                 insumos[i].fecha,
                 insumos[i].categoria,
                 insumos[i].producto,
                 insumos[i].cantidad,
                 insumos[i].valor_total);
     }
-    fclose(archivo);
+
+    fclose(archivoLectura);  // Cerrar archivo de lectura
+    fclose(archivo);         // Cerrar archivo de escritura
+}
+int insumo_categoria_lower_than(void* a, void* b) {
+    Insumo* ia = (Insumo*)a;
+    Insumo* ib = (Insumo*)b;
+    return strcmp(ia->categoria, ib->categoria) < 0;
 }
 
