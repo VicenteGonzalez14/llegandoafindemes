@@ -527,53 +527,48 @@ void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
 }
 
 
-void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
-    FILE *archivo = fopen(nombreArchivo, "a"); // Usamos "a" para agregar insumos nuevos
-    if (!archivo) {
-        return;  // No se pudo abrir el archivo para escritura
-    }
-
-    // Abrir archivo en modo lectura para verificar duplicados
-    FILE *archivoLectura = fopen(nombreArchivo, "r");
-    if (!archivoLectura) {
-        fclose(archivo);
-        return;  // No se pudo abrir el archivo para lectura
-    }
-
-    char linea[255];
-    char *fecha, *categoria, *producto;
-    int cantidad, valor_total;
-
-    // Leer el archivo y verificar si el insumo ya está en el archivo
-    while (fgets(linea, sizeof(linea), archivoLectura)) {
-        // Compara el insumo con los que ya están en el archivo
-        sscanf(linea, "%s,%s,%s,%d,%d", fecha, categoria, producto, &cantidad, &valor_total);
-
-        // Compara con los insumos en memoria (hashMap)
-        for (int i = 0; i < totalInsumos; i++) {
-            if (strcmp(insumos[i].fecha, fecha) == 0 && 
-                strcmp(insumos[i].categoria, categoria) == 0 && 
-                strcmp(insumos[i].producto, producto) == 0) {
-                // Si el insumo ya está en el archivo, no lo agregamos
-                fclose(archivoLectura);
-                fclose(archivo);
-                return;
-            }
+// Función para verificar si el insumo ya está en el HashMap
+int existeInsumoEnHashMap(Insumo insumo) {
+    // Buscar en la tabla 'fecha' del HashMap
+    unsigned int idx = hashFecha(insumo.fecha);
+    Nodo *nodo = hashMap.tabla_fecha[idx];
+    while (nodo) {
+        if (strcmp(nodo->insumo.fecha, insumo.fecha) == 0 &&
+            strcmp(nodo->insumo.categoria, insumo.categoria) == 0 &&
+            strcmp(nodo->insumo.producto, insumo.producto) == 0 &&
+            nodo->insumo.cantidad == insumo.cantidad &&
+            nodo->insumo.valor_total == insumo.valor_total) {
+            return 1; // El insumo ya existe en el HashMap
         }
+        nodo = nodo->siguiente;
     }
+    return 0; // El insumo no existe en el HashMap
+}
+
+void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
+    FILE *archivo = fopen(nombreArchivo, "a"); // Abrimos el archivo en modo 'append'
+    if (!archivo) return;
 
     for (int i = 0; i < totalInsumos; i++) {
-        fprintf(archivo, "%s,%s,%s,%d,%d\n", 
-                insumos[i].fecha,
-                insumos[i].categoria,
-                insumos[i].producto,
-                insumos[i].cantidad,
-                insumos[i].valor_total);
+        // Verificar si el insumo ya existe en el HashMap antes de escribirlo
+        if (!existeInsumoEnHashMap(insumos[i])) {
+            fprintf(archivo, "%s,%s,%s,%d,%d\n",
+                    insumos[i].fecha,
+                    insumos[i].categoria,
+                    insumos[i].producto,
+                    insumos[i].cantidad,
+                    insumos[i].valor_total);
+            // Agregarlo al HashMap para evitar que se vuelva a guardar
+            insertarEnTabla(hashMap.tabla_fecha, hashFechaPtr, insumos[i].fecha, insumos[i]);
+            insertarEnTabla(hashMap.tabla_categoria, hashStrPtr, insumos[i].categoria, insumos[i]);
+            insertarEnTabla(hashMap.tabla_producto, hashStrPtr, insumos[i].producto, insumos[i]);
+            insertarEnTabla(hashMap.tabla_cantidad, hashCantidadPtr, &insumos[i].cantidad, insumos[i]);
+            insertarEnTabla(hashMap.tabla_valor_total, hashValorTotalPtr, &insumos[i].valor_total, insumos[i]);
+        }
     }
-
-    fclose(archivoLectura);  // Cerrar archivo de lectura
-    fclose(archivo);         // Cerrar archivo de escritura
+    fclose(archivo);
 }
+
 int insumo_categoria_lower_than(void* a, void* b) {
     Insumo* ia = (Insumo*)a;
     Insumo* ib = (Insumo*)b;

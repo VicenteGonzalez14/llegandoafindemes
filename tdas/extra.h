@@ -63,4 +63,6 @@ void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, in
 unsigned int hashStr(const char* clave);
 unsigned int hashFecha(const char* fecha);
 int insumo_categoria_lower_than(void* a, void* b);
+int existeInsumoEnHashMap(Insumo insumo);
+
 #endif
