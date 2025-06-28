@@ -216,8 +216,8 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
 }
 
 void mostrarBoletinSemanal() {
-    printf("\n--- BOLETÍN SEMANAL ---\n");
-    
+    printf("\n--- BOLETÍN SEMANAL (agrupado por semana) ---\n");
+
     // Obtener la fecha actual y la de hace 7 días
     time_t t_actual = time(NULL);
     struct tm tm_actual = *localtime(&t_actual);
@@ -237,7 +237,12 @@ void mostrarBoletinSemanal() {
     time_t t_ini = mktime(&tm_ini);
     time_t t_fin = mktime(&tm_fin);
 
-    char ultimo_mes[20] = "";
+    // Suponiendo que solo mostrarás insumos de la semana actual
+    int semana_actual = tm_ini.tm_yday / 7 + 1;
+    int encontrados = 0;
+
+    printf("Semana %d:\n", semana_actual);
+
     for (int i = 0; i < hashMap.capacidad; i++) {
         Nodo *nodo = hashMap.tabla_fecha[i];
         while (nodo) {
@@ -245,47 +250,24 @@ void mostrarBoletinSemanal() {
             strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
             time_t t_insumo = mktime(&tm_insumo);
 
-            if (t_insumo >= t_ini && t_insumo <= t_fin) {
-                // Formatear mes y día en español
+            int semana_insumo = tm_insumo.tm_yday / 7 + 1;
+
+            if (t_insumo >= t_ini && t_insumo <= t_fin && semana_insumo == semana_actual) {
+                encontrados++;
                 char mes_nombre[20];
                 strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
 
-                // Imprimir el mes solo si cambia
-                if (strcmp(ultimo_mes, mes_nombre) != 0) {
-                    printf("%s:\n", mes_nombre);
-                    strcpy(ultimo_mes, mes_nombre);
-                }
-
-                // Imprimir insumo en formato solicitado
                 printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
                     tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
             }
             nodo = nodo->siguiente;
         }
     }
-    char categorias_mostradas[100][50];
-    int categorias_count = 0;
 
-    for (int i = 0; i < hashMap.capacidad; i++) {
-        Nodo *nodo = hashMap.tabla_categoria[i];
-        while (nodo) {
-            int ya_mostrada = 0;
-            for (int j = 0; j < categorias_count; j++) {
-                if (strcmp(categorias_mostradas[j], nodo->insumo.categoria) == 0) {
-                    ya_mostrada = 1;
-                    break;
-                }
-            }
-            if (!ya_mostrada) {
-                strcpy(categorias_mostradas[categorias_count++], nodo->insumo.categoria);
-                printf("\n--- Insumos de la categoría '%s' esta semana ---\n", nodo->insumo.categoria);
-                buscarInsumosPorCategoria(nodo->insumo.categoria);
-            }
-            nodo = nodo->siguiente;
-        }
+    if (encontrados == 0) {
+        printf("No hay insumos registrados en la semana actual.\n");
     }
 }
-
 
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
