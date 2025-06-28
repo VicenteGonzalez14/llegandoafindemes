@@ -263,7 +263,7 @@ void mostrarBoletinMensual() {
     Map* gastoPorSemana = createMap(is_equal_string);
     int totalGastado = 0;
 
-<<<<<<< Updated upstream
+
     for (int i = 0; i < totalInsumos; i++) {
         if (estaEnUltimosNDias(insumos[i].fecha, 30)) {
             if (strlen(insumos[i].categoria) == 0) continue;
@@ -307,7 +307,7 @@ void mostrarBoletinMensual() {
     }
 
     printf("\nTotal gastado en los últimos 30 días: $%d\n", totalGastado);
-=======
+
     // Matriz para predicción (máx. 6 semanas)
     int semanaActual = 1;
     int semanas[6] = {0};
@@ -315,7 +315,7 @@ void mostrarBoletinMensual() {
     int semanaGastos[6] = {0};
     int contadorSemanas = 0;
 
->>>>>>> Stashed changes
+
 
     // --- Mostrar top 3 categorías ---
     printf("\nTop 3 categorías más gastadas:\n");
