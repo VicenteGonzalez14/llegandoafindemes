@@ -6,7 +6,7 @@
 typedef struct Pair {
     void* key;
     void* value;
-} MapPair;
+} Pair;
 
 typedef struct Map Map;
 

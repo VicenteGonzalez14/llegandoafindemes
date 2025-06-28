@@ -340,7 +340,7 @@ void mostrarBoletinMensual() {
     char* topCategorias[3] = {NULL, NULL, NULL};
     int topGastos[3] = {0};
 
-    MapPair* par = map_first(gastoPorCategoria);
+    MapPair* par = firstMap(gastoPorCategoria);
     while (par) {
         char* cat = (char*)par->key;
         int gasto = *((int*)par->value);

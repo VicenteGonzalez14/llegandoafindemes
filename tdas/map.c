@@ -15,7 +15,7 @@ typedef Map Map;
 int (*current_lt)(void *, void *) = NULL;
 
 int pair_lt(void *pair1, void *pair2) {
-  return (current_lt(((MapPair *)pair1)->key, ((MapPair *)pair2)->key));
+  return (current_lt(((Pair *)pair1)->key, ((Pair *)pair2)->key));
 }
 
 Map *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
@@ -38,7 +38,7 @@ Map *map_create(int (*is_equal)(void *key1, void *key2)) {
 
 
 void multimap_insert(Map *map, void *key, void *value) {
-  MapPair *pair = (MapPair *)malloc(sizeof(MapPair));
+  Pair *pair = (Pair *)malloc(sizeof(Pair));
   pair->key = key;
   pair->value = value;
 
@@ -54,14 +54,14 @@ void map_insert(Map *map, void *key, void *value) {
   multimap_insert(map, key, value);
 }
 
-int _is_equal(Map *map, MapPair *pair, void *key) {
+int _is_equal(Map *map, Pair *pair, void *key) {
   return ((map->is_equal && map->is_equal(pair->key, key)) ||
           (map->lower_than && !map->lower_than(pair->key, key) &&
            !map->lower_than(key, pair->key)));
 }
 
-MapPair *map_remove(Map *map, void *key) {
-  for (MapPair *pair = list_first(map->ls); pair != NULL;
+Map *map_remove(Map *map, void *key) {
+  for (Pair *pair = list_first(map->ls); pair != NULL;
        pair = list_next(map->ls))
     if (_is_equal(map, pair, key)) {
       list_popCurrent(map->ls);
@@ -70,8 +70,8 @@ MapPair *map_remove(Map *map, void *key) {
   return NULL;
 }
 
-MapPair *map_search(Map *map, void *key) {
-  for (MapPair *pair = list_first(map->ls); pair != NULL;
+Map *map_search(Map *map, void *key) {
+  for (Map *pair = list_first(map->ls); pair != NULL;
        pair = list_next(map->ls)) {
     if (_is_equal(map, pair, key))
       return pair;
@@ -79,8 +79,8 @@ MapPair *map_search(Map *map, void *key) {
   return NULL;
 }
 
-MapPair *map_first(Map *map) { return list_first(map->ls); }
+Map *map_first(Map *map) { return list_first(map->ls); }
 
-MapPair *map_next(Map *map) { return list_next(map->ls); }
+Map *map_next(Map *map) { return list_next(map->ls); }
 
 void map_clean(Map *map) { list_clean(map->ls); }
