@@ -224,40 +224,75 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
 }
 
 void mostrarBoletinSemanal() {
-    printf("\n--- BOLETÍN SEMANAL (agrupado por semana) ---\n");
+    printf("\n--- BOLETINES SEMANALES ---\n");
 
-    // Creamos un arreglo para marcar qué semanas ya imprimimos (hasta 54 semanas por año)
-    int semanas_impresas[54] = {0};
+    // Encontrar el rango de fechas de todos los insumos
+    if (totalInsumos == 0) {
+        printf("No hay insumos registrados.\n");
+        return;
+    }
 
-    for (int semana = 1; semana <= 53; semana++) {
+    // Buscar la fecha más antigua y la más reciente
+    int min_year = 3000, min_mon = 12, min_day = 31;
+    int max_year = 1900, max_mon = 1, max_day = 1;
+    for (int i = 0; i < totalInsumos; i++) {
+        int y, m, d;
+        sscanf(insumos[i].fecha, "%d-%d-%d", &y, &m, &d);
+        if (y < min_year || (y == min_year && m < min_mon) || (y == min_year && m == min_mon && d < min_day)) {
+            min_year = y; min_mon = m; min_day = d;
+        }
+        if (y > max_year || (y == max_year && m > max_mon) || (y == max_year && m == max_mon && d > max_day)) {
+            max_year = y; max_mon = m; max_day = d;
+        }
+    }
+
+    // Convertir fechas a time_t
+    struct tm tm_min = {0}, tm_max = {0};
+    tm_min.tm_year = min_year - 1900; tm_min.tm_mon = min_mon - 1; tm_min.tm_mday = min_day;
+    tm_max.tm_year = max_year - 1900; tm_max.tm_mon = max_mon - 1; tm_max.tm_mday = max_day;
+    time_t t_min = mktime(&tm_min);
+    time_t t_max = mktime(&tm_max);
+
+    // Recorrer semana a semana
+    int hay_insumos = 0;
+    for (time_t t_ini = t_min; t_ini <= t_max; t_ini += 7 * 24 * 60 * 60) {
+        struct tm tm_ini = *localtime(&t_ini);
+        struct tm tm_fin = tm_ini;
+        tm_fin.tm_mday += 6;
+        mktime(&tm_fin); // Normaliza la fecha
+
+        char fecha_inicio[11], fecha_fin[11];
+        strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_ini);
+        strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_fin);
+
+        // Contador para saber si hay insumos en la semana
         int encontrados = 0;
-        // Recorremos toda la tabla hash de fechas
+        // Modifica temporalmente buscarInsumosEnRangoDeFechas para que cuente e imprima
+        printf("\nSemana del %s al %s:\n", fecha_inicio, fecha_fin);
         for (int i = 0; i < hashMap.capacidad; i++) {
             Nodo *nodo = hashMap.tabla_fecha[i];
             while (nodo) {
                 struct tm tm_insumo = {0};
                 strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
-                int semana_insumo = tm_insumo.tm_yday / 7 + 1;
+                time_t t_insumo = mktime(&tm_insumo);
 
-                if (semana_insumo == semana) {
-                    if (!semanas_impresas[semana]) {
-                        printf("\nSemana %d:\n", semana);
-                        semanas_impresas[semana] = 1;
-                    }
+                if (t_insumo >= mktime(&tm_ini) && t_insumo <= mktime(&tm_fin)) {
                     encontrados++;
                     char mes_nombre[20];
                     strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
-
                     printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
                         tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
                 }
                 nodo = nodo->siguiente;
             }
         }
-        // Si quieres mostrar semanas sin insumos, puedes descomentar esto:
-        // if (!encontrados) printf("\nSemana %d:\n  No hay insumos registrados.\n", semana);
+        if (!encontrados) printf("  No hay insumos registrados.\n");
+        else hay_insumos = 1;
     }
+
+    if (!hay_insumos) printf("No hay insumos registrados.\n");
 }
+
 
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
@@ -509,5 +544,11 @@ void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
                 insumos[i].valor_total);
     }
     fclose(archivo);
+}
+
+int insumo_categoria_lower_than(void* a, void* b) {
+    Insumo* ia = (Insumo*)a;
+    Insumo* ib = (Insumo*)b;
+    return strcmp(ia->categoria, ib->categoria) < 0;
 }
 
