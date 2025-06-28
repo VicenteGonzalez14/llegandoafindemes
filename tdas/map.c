@@ -18,7 +18,7 @@ int pair_lt(void *pair1, void *pair2) {
   return (current_lt(((MapPair *)pair1)->key, ((MapPair *)pair2)->key));
 }
 
-Map *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
+MapPair *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
   Map *newMap = (Map *)malloc(sizeof(Map));
   newMap->lower_than = lower_than;
   newMap->is_equal = NULL;
@@ -27,7 +27,7 @@ Map *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
   return newMap;
 }
 
-Map *map_create(int (*is_equal)(void *key1, void *key2)) {
+MapPair *map_create(int (*is_equal)(void *key1, void *key2)) {
   Map *newMap = (Map *)malloc(sizeof(Map));
   newMap->lower_than = NULL;
   newMap->is_equal = is_equal;
