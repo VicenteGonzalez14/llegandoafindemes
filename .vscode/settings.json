@@ -3,6 +3,7 @@
         "list.h": "c",
         "extra.h": "c",
         "stdio.h": "c",
-        "functional": "c"
+        "functional": "c",
+        "locale.h": "c"
     }
 }

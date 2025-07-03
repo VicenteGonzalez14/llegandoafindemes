@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include <limits.h>
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
 
@@ -15,16 +16,12 @@ int string_lower_than(void* a, void* b) {
 int is_equal_string(void *a, void *b) {
     return strcmp((char*)a, (char*)b) == 0;
 }
-
 char **leer_linea_csv(FILE *archivo, char separador) {
     static char linea[MAX_LINE_LENGTH];
     static char *campos[MAX_FIELDS];
     int idx = 0;
-
     if (fgets(linea, MAX_LINE_LENGTH, archivo) == NULL)
         return NULL;  // fin de fichero
-
-    // quitar salto de línea
     linea[strcspn(linea, "\r\n")] = '\0';
 
     char *ptr = linea;
@@ -35,8 +32,6 @@ char **leer_linea_csv(FILE *archivo, char separador) {
             // campo entrecomillado
             ptr++;              // saltar la comilla inicial
             start = ptr;
-
-            // compactar contenido: convertir "" → " y copiar el resto
             char *dest = ptr;
             while (*ptr) {
                 if (*ptr == '\"' && *(ptr + 1) == '\"') {
@@ -52,8 +47,6 @@ char **leer_linea_csv(FILE *archivo, char separador) {
                 }
             }
             *dest = '\0';        // terminar cadena
-
-            // ahora ptr apunta justo después de la comilla de cierre
             if (*ptr == separador) ptr++;
         }
         else {
@@ -66,7 +59,6 @@ char **leer_linea_csv(FILE *archivo, char separador) {
                 ptr++;
             }
         }
-
         campos[idx++] = start;
     }
 
@@ -87,113 +79,108 @@ char *strptime(const char *s, const char *format, struct tm *tm) {
     return NULL;
 }
 
-void cargarDatasetDesdeCSV(const char *nombreArchivo) {
-    
-    FILE *archivo = fopen(nombreArchivo, "r");
+void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo) {
+    FILE* archivo = fopen(nombreArchivo, "r");  // Corregido: comillas dobles para string
     if (!archivo) {
         printf("No se pudo abrir el archivo: %s\n", nombreArchivo);
         return;
     }
 
-    char **campos;
+    char** campos;
     int fila = 0;
+    int insumosCargados = 0;
 
-    while ((campos = leer_linea_csv(archivo, ',')) != NULL) {
-        if (fila++ == 0) continue;  // Saltar la cabecera
+    while ((campos = leer_linea_csv(archivo, ',')) != NULL) {  // Corregido: archivo, no archive
+        if (fila++ == 0) continue;  // Saltar cabecera
 
-        if (totalInsumos >= MAX_INSUMOS) {
-            printf("Límite de insumos alcanzado.\n");
+        // Crear nuevo insumo
+        Insumo* nuevoInsumo = (Insumo*)malloc(sizeof(Insumo));
+        if (!nuevoInsumo) {
+            printf("Error de memoria al crear insumo.\n");
             break;
         }
 
-        strcpy(insumos[totalInsumos].fecha, campos[0]);
-        strcpy(insumos[totalInsumos].categoria, campos[1]);
-        strcpy(insumos[totalInsumos].producto, campos[2]); 
-        insumos[totalInsumos].cantidad = atoi(campos[3]);
-        insumos[totalInsumos].valor_total = atoi(campos[4]);
+        // Asignar valores desde el CSV (con validación)
+        strncpy(nuevoInsumo->fecha, campos[0], sizeof(nuevoInsumo->fecha) - 1);
+        strncpy(nuevoInsumo->categoria, campos[1], sizeof(nuevoInsumo->categoria) - 1);
+        strncpy(nuevoInsumo->producto, campos[2], sizeof(nuevoInsumo->producto) - 1);
+        nuevoInsumo->cantidad = atoi(campos[3]);
+        nuevoInsumo->valor_total = atoi(campos[4]);
 
-        // Insertar en las tablas hash
-        insertarEnTabla(hashMap.tabla_fecha,      hashFechaPtr,     insumos[totalInsumos].fecha,       insumos[totalInsumos]);
-        insertarEnTabla(hashMap.tabla_categoria,  hashStrPtr,       insumos[totalInsumos].categoria,  insumos[totalInsumos]);
-        insertarEnTabla(hashMap.tabla_producto,   hashStrPtr,       insumos[totalInsumos].producto,   insumos[totalInsumos]);
-        insertarEnTabla(hashMap.tabla_cantidad,   hashCantidadPtr,  &insumos[totalInsumos].cantidad,  insumos[totalInsumos]);
-        insertarEnTabla(hashMap.tabla_valor_total,hashValorTotalPtr,&insumos[totalInsumos].valor_total,insumos[totalInsumos]);
+        // Insertar en el mapa
+        insertar_insumo(mapa, nuevoInsumo);
+        insumosCargados++;
 
-        totalInsumos++;
+        // Liberar memoria de los campos del CSV (si es necesario)
+        for (int i = 0; campos[i]; i++) {
+            free(campos[i]);
+        }
+        free(campos);
     }
 
     fclose(archivo);
-    printf("Se cargaron %d insumos desde el archivo.\n", totalInsumos);
+    printf("Se cargaron %d insumos desde el archivo.\n", insumosCargados);
 }
-
 
 List *split_string(const char *str, const char *delim) {
   List *result = list_create();
   char *token = strtok((char *)str, delim);
 
   while (token != NULL) {
-    // Eliminar espacios en blanco al inicio del token
     while (*token == ' ') {
       token++;
     }
-
-    // Eliminar espacios en blanco al final del token
     char *end = token + strlen(token) - 1;
     while (*end == ' ' && end > token) {
       *end = '\0';
       end--;
     }
-
-    // Copiar el token en un nuevo string
     char *new_token = strdup(token);
-
-    // Agregar el nuevo string a la lista
     list_pushBack(result, new_token);
-
-    // Obtener el siguiente token
     token = strtok(NULL, delim);
   }
-
   return result;
 }
-void insertarEnTabla(Nodo* tabla[], unsigned int (*func_hash)(const void*), const void* clave, Insumo insumo) {
-    unsigned int idx = func_hash(clave) % hashMap.capacidad;
-    Nodo* nuevo = malloc(sizeof(Nodo));
-    nuevo->insumo = insumo;
-    nuevo->siguiente = tabla[idx];
-    tabla[idx] = nuevo;
+
+// Libera un insumo individual (para usar en list_clean)
+// Función para liberar un insumo
+void liberar_insumo(void* data) {
+    free((Insumo*)data);
 }
 
-void buscarInsumosPorCategoria(const char *categoria) {
-    unsigned int idx = hashStr(categoria);  // Usar hashStr para generar el índice
-    Nodo *nodo = hashMap.tabla_categoria[idx];
-    while (nodo) {
-        if (strcmp(nodo->insumo.categoria, categoria) == 0) {
-            // Mostrar los detalles del insumo
-            printf("Insumo encontrado: %s - %s - %d - $%d\n", 
-                   nodo->insumo.fecha, nodo->insumo.producto, 
-                   nodo->insumo.cantidad, nodo->insumo.valor_total);
-        }
-        nodo = nodo->siguiente;
+// Función para liberar el mapa completo
+void liberar_mapa(Map* map) {
+    MapPair* pair = map_first(map);
+    while (pair != NULL) {
+        List* lista = (List*)pair->value;
+        list_clean(lista);  // Asume que list.h tiene esta función
+        free(lista);
+        free(pair->key);  // Liberar la clave (categoría)
+        pair = map_next(map);
     }
+    map_clean(map);
 }
-void buscarInsumosPorFecha(const char *fecha) {
-    unsigned int idx = hashFecha(fecha);  // Genera el índice usando la función hashFecha
-    Nodo *nodo = hashMap.tabla_fecha[idx];
-    while (nodo) {
-        if (strcmp(nodo->insumo.fecha, fecha) == 0) {
-            // Mostrar los detalles del insumo
-            printf("Insumo encontrado: %s - %s - %d - $%d\n", 
-                   nodo->insumo.producto, nodo->insumo.categoria, 
-                   nodo->insumo.cantidad, nodo->insumo.valor_total);
-        }
-        nodo = nodo->siguiente;
+
+// Función para insertar insumos (versión con Map genérico)
+void insertar_insumo(Map* map, Insumo* insumo) {
+    char* clave = strdup(insumo->categoria);
+    MapPair* pair = map_search(map, clave);
+    
+    if (pair != NULL) {
+        // La categoría existe: agregar a la lista existente
+        List* lista = (List*)pair->value;
+        list_pushBack(lista, insumo);
+    } else {
+        // Nueva categoría: crear lista y agregar al mapa
+        List* nueva_lista = list_create();
+        list_pushBack(nueva_lista, insumo);
+        map_insert(map, clave, nueva_lista);
     }
+    free(clave);
 }
 
-
-void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fin) {
-    // Convierte las fechas a formato timestamp para comparar
+void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin) {
+    // Convertir fechas a timestamp
     struct tm tm_inicio = {0}, tm_fin = {0};
     strptime(fecha_inicio, "%Y-%m-%d", &tm_inicio);
     strptime(fecha_fin, "%Y-%m-%d", &tm_fin);
@@ -201,94 +188,71 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
     time_t t_inicio = mktime(&tm_inicio);
     time_t t_fin = mktime(&tm_fin);
 
-    // Recorre la tabla de fechas
-    for (int i = 0; i < hashMap.capacidad; i++) {
-        Nodo *nodo = hashMap.tabla_fecha[i];
-        while (nodo) {
+    // Recorrer todas las categorías del mapa
+    MapPair* pair = map_first(map);
+    while (pair != NULL) {
+        List* lista_insumos = (List*)pair->value;
+        Insumo* insumo = list_first(lista_insumos);
+        
+        while (insumo != NULL) {
             struct tm tm_insumo = {0};
-            strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
+            strptime(insumo->fecha, "%Y-%m-%d", &tm_insumo);
             time_t t_insumo = mktime(&tm_insumo);
 
             if (t_insumo >= t_inicio && t_insumo <= t_fin) {
-                printf("Insumo dentro del rango: %s - %d unidades - $%d\n", 
-                        nodo->insumo.producto, nodo->insumo.cantidad, nodo->insumo.valor_total);
+                printf("Insumo [%s]: %s - %d unidades - $%d\n", 
+                       insumo->categoria, insumo->producto, 
+                       insumo->cantidad, insumo->valor_total);
             }
-
-            nodo = nodo->siguiente;
+            insumo = list_next(lista_insumos);
         }
+        pair = map_next(map);
     }
 }
-
-void mostrarBoletinSemanal() {
+void mostrarBoletinSemanal(Map* map) {
     printf("\n--- BOLETINES SEMANALES ---\n");
 
-    // Encontrar el rango de fechas de todos los insumos
-    if (totalInsumos == 0) {
+    // Obtener rango de fechas extremas
+    time_t t_min = LONG_MAX, t_max = 0;
+    MapPair* pair = map_first(map);
+    
+    while (pair != NULL) {
+        List* lista = (List*)pair->value;
+        Insumo* insumo = list_first(lista);
+        
+        while (insumo != NULL) {
+            struct tm tm = {0};
+            strptime(insumo->fecha, "%Y-%m-%d", &tm);
+            time_t t = mktime(&tm);
+            
+            if (t < t_min) t_min = t;
+            if (t > t_max) t_max = t;
+            
+            insumo = list_next(lista);
+        }
+        pair = map_next(map);
+    }
+
+    if (t_min == LONG_MAX) {
         printf("No hay insumos registrados.\n");
         return;
     }
 
-    // Buscar la fecha más antigua y la más reciente
-    int min_year = 3000, min_mon = 12, min_day = 31;
-    int max_year = 1900, max_mon = 1, max_day = 1;
-    for (int i = 0; i < totalInsumos; i++) {
-        int y, m, d;
-        sscanf(insumos[i].fecha, "%d-%d-%d", &y, &m, &d);
-        if (y < min_year || (y == min_year && m < min_mon) || (y == min_year && m == min_mon && d < min_day)) {
-            min_year = y; min_mon = m; min_day = d;
-        }
-        if (y > max_year || (y == max_year && m > max_mon) || (y == max_year && m == max_mon && d > max_day)) {
-            max_year = y; max_mon = m; max_day = d;
-        }
-    }
-
-    // Convertir fechas a time_t
-    struct tm tm_min = {0}, tm_max = {0};
-    tm_min.tm_year = min_year - 1900; tm_min.tm_mon = min_mon - 1; tm_min.tm_mday = min_day;
-    tm_max.tm_year = max_year - 1900; tm_max.tm_mon = max_mon - 1; tm_max.tm_mday = max_day;
-    time_t t_min = mktime(&tm_min);
-    time_t t_max = mktime(&tm_max);
-
-    // Recorrer semana a semana
-    int hay_insumos = 0;
+    // Generar reporte semanal
     for (time_t t_ini = t_min; t_ini <= t_max; t_ini += 7 * 24 * 60 * 60) {
         struct tm tm_ini = *localtime(&t_ini);
         struct tm tm_fin = tm_ini;
         tm_fin.tm_mday += 6;
-        mktime(&tm_fin); // Normaliza la fecha
+        mktime(&tm_fin);
 
         char fecha_inicio[11], fecha_fin[11];
         strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_ini);
         strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_fin);
 
-        // Contador para saber si hay insumos en la semana
-        int encontrados = 0;
-        // Modifica temporalmente buscarInsumosEnRangoDeFechas para que cuente e imprima
         printf("\nSemana del %s al %s:\n", fecha_inicio, fecha_fin);
-        for (int i = 0; i < hashMap.capacidad; i++) {
-            Nodo *nodo = hashMap.tabla_fecha[i];
-            while (nodo) {
-                struct tm tm_insumo = {0};
-                strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
-                time_t t_insumo = mktime(&tm_insumo);
-
-                if (t_insumo >= mktime(&tm_ini) && t_insumo <= mktime(&tm_fin)) {
-                    encontrados++;
-                    char mes_nombre[20];
-                    strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
-                    printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
-                        tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
-                }
-                nodo = nodo->siguiente;
-            }
-        }
-        if (!encontrados) printf("  No hay insumos registrados.\n");
-        else hay_insumos = 1;
+        buscarInsumosEnRangoDeFechas(map, fecha_inicio, fecha_fin);
     }
-
-    if (!hay_insumos) printf("No hay insumos registrados.\n");
 }
-
 
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
