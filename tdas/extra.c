@@ -1,5 +1,4 @@
 #include "extra.h"
-#include "regresion.h"
 #include "map.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -221,72 +220,81 @@ void buscarInsumosEnRangoDeFechas(const char* fecha_inicio, const char* fecha_fi
 }
 
 void mostrarBoletinSemanal() {
-    printf("\n--- BOLETÍN SEMANAL ---\n");
-    
-    struct tm tm_ini = {0}, tm_fin = {0};
-    strptime("2025-05-01", "%Y-%m-%d", &tm_ini);   // Inicio de mayo
-    strptime("2025-07-31", "%Y-%m-%d", &tm_fin);   // Fin de julio
-    time_t t_ini = mktime(&tm_ini);
-    time_t t_fin = mktime(&tm_fin); +86399;
+    printf("\n--- BOLETINES SEMANALES ---\n");
 
+    // Encontrar el rango de fechas de todos los insumos
+    if (totalInsumos == 0) {
+        printf("No hay insumos registrados.\n");
+        return;
+    }
 
-    char ultimo_mes[20] = "";
-    for (int i = 0; i < hashMap.capacidad; i++) {
-        Nodo *nodo = hashMap.tabla_fecha[i];
-        while (nodo) {
-            struct tm tm_insumo = {0};
-            strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
-            time_t t_insumo = mktime(&tm_insumo);
-
-            if (t_insumo >= t_ini && t_insumo <= t_fin) {
-                // Formatear mes y día en español
-                char mes_nombre[20];
-                strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
-
-                // Imprimir el mes solo si cambia
-                if (strcmp(ultimo_mes, mes_nombre) != 0) {
-                    printf("%s:\n", mes_nombre);
-                    strcpy(ultimo_mes, mes_nombre);
-                }
-
-                // Imprimir insumo en formato solicitado
-                printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
-                    tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
-            }
-            nodo = nodo->siguiente;
+    // Buscar la fecha más antigua y la más reciente
+    int min_year = 3000, min_mon = 12, min_day = 31;
+    int max_year = 1900, max_mon = 1, max_day = 1;
+    for (int i = 0; i < totalInsumos; i++) {
+        int y, m, d;
+        sscanf(insumos[i].fecha, "%d-%d-%d", &y, &m, &d);
+        if (y < min_year || (y == min_year && m < min_mon) || (y == min_year && m == min_mon && d < min_day)) {
+            min_year = y; min_mon = m; min_day = d;
+        }
+        if (y > max_year || (y == max_year && m > max_mon) || (y == max_year && m == max_mon && d > max_day)) {
+            max_year = y; max_mon = m; max_day = d;
         }
     }
-    char categorias_mostradas[100][50];
-    int categorias_count = 0;
 
-    for (int i = 0; i < hashMap.capacidad; i++) {
-        Nodo *nodo = hashMap.tabla_categoria[i];
-        while (nodo) {
-            int ya_mostrada = 0;
-            for (int j = 0; j < categorias_count; j++) {
-                if (strcmp(categorias_mostradas[j], nodo->insumo.categoria) == 0) {
-                    ya_mostrada = 1;
-                    break;
+    // Convertir fechas a time_t
+    struct tm tm_min = {0}, tm_max = {0};
+    tm_min.tm_year = min_year - 1900; tm_min.tm_mon = min_mon - 1; tm_min.tm_mday = min_day;
+    tm_max.tm_year = max_year - 1900; tm_max.tm_mon = max_mon - 1; tm_max.tm_mday = max_day;
+    time_t t_min = mktime(&tm_min);
+    time_t t_max = mktime(&tm_max);
+
+    // Recorrer semana a semana
+    int hay_insumos = 0;
+    for (time_t t_ini = t_min; t_ini <= t_max; t_ini += 7 * 24 * 60 * 60) {
+        struct tm tm_ini = *localtime(&t_ini);
+        struct tm tm_fin = tm_ini;
+        tm_fin.tm_mday += 6;
+        mktime(&tm_fin); // Normaliza la fecha
+
+        char fecha_inicio[11], fecha_fin[11];
+        strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_ini);
+        strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_fin);
+
+        // Contador para saber si hay insumos en la semana
+        int encontrados = 0;
+        // Modifica temporalmente buscarInsumosEnRangoDeFechas para que cuente e imprima
+        printf("\nSemana del %s al %s:\n", fecha_inicio, fecha_fin);
+        for (int i = 0; i < hashMap.capacidad; i++) {
+            Nodo *nodo = hashMap.tabla_fecha[i];
+            while (nodo) {
+                struct tm tm_insumo = {0};
+                strptime(nodo->insumo.fecha, "%Y-%m-%d", &tm_insumo);
+                time_t t_insumo = mktime(&tm_insumo);
+
+                if (t_insumo >= mktime(&tm_ini) && t_insumo <= mktime(&tm_fin)) {
+                    encontrados++;
+                    char mes_nombre[20];
+                    strftime(mes_nombre, sizeof(mes_nombre), "%B", &tm_insumo);
+                    printf("  - El día %d de %s, realizó la compra de '%s'. Valor: $%d\n",
+                        tm_insumo.tm_mday, mes_nombre, nodo->insumo.producto, nodo->insumo.valor_total);
                 }
+                nodo = nodo->siguiente;
             }
-            if (!ya_mostrada) {
-                strcpy(categorias_mostradas[categorias_count++], nodo->insumo.categoria);
-                printf("\n--- Insumos de la categoría '%s' esta semana ---\n", nodo->insumo.categoria);
-                buscarInsumosPorCategoria(nodo->insumo.categoria);
-            }
-            nodo = nodo->siguiente;
         }
+        if (!encontrados) printf("  No hay insumos registrados.\n");
+        else hay_insumos = 1;
     }
+
+    if (!hay_insumos) printf("No hay insumos registrados.\n");
 }
 
 
 void mostrarBoletinMensual() {
     printf("\n--- BOLETÍN MENSUAL ---\n");
 
-    struct tm tm_actual = {0};
-    strptime("2025-07-31", "%Y-%m-%d", &tm_actual);
-    time_t t_actual = mktime(&tm_actual);
-
+    time_t t_actual = time(NULL);
+    struct tm tm_actual = *localtime(&t_actual);
 
     char fecha_fin[11], fecha_inicio[11];
     strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_actual);
@@ -432,58 +440,70 @@ void mostrarBoletinMensual() {
 
         fecha = list_next(fechasOrdenadas);
     }
+}
 
-        // ===== Predicción del gasto para el próximo mes (agosto) usando regresión lineal =====
-    printf("\n\n--- Predicción de gasto para el próximo mes ---\n");
 
-    // Paso 1: Mapear gastos por mes
-    int gastosMensuales[12] = {0}; // Índice 0: enero, 1: febrero, ..., 11: diciembre
 
-    for (int i = 0; i < hashMap.capacidad; i++) {
-        Nodo* nodo = hashMap.tabla_fecha[i];
-        while (nodo) {
-            struct tm fecha_insumo = {0};
-            strptime(nodo->insumo.fecha, "%Y-%m-%d", &fecha_insumo);
-            int mes = fecha_insumo.tm_mon; // 0-based (0=enero)
 
-            gastosMensuales[mes] += nodo->insumo.valor_total;
-            nodo = nodo->siguiente;
-        }
+float predecirGastoSemanal() {
+    // Paso 1: agrupar los gastos semanales
+    int semanasMax = 10;
+    int semanaActual = 0;
+    int gastoSemanal[semanasMax];
+    memset(gastoSemanal, 0, sizeof(gastoSemanal));
+
+    // Obtener la fecha actual
+    time_t t_actual = time(NULL);
+    struct tm *fecha_actual = localtime(&t_actual);
+
+    for (int i = 0; i < totalInsumos; i++) {
+        struct tm fecha = {0};
+        int anio, mes, dia;
+        sscanf(insumos[i].fecha, "%d-%d-%d", &anio, &mes, &dia);
+        fecha.tm_year = anio - 1900;
+        fecha.tm_mon = mes - 1;
+        fecha.tm_mday = dia;
+
+        time_t t_insumo = mktime(&fecha);
+        double dias_diferencia = difftime(t_actual, t_insumo) / (60 * 60 * 24);
+
+        int semana = (int)(dias_diferencia / 7);
+        if (semana < semanasMax)
+            gastoSemanal[semana] += insumos[i].valor_total;
+
+        if (semana > semanaActual)
+            semanaActual = semana;
     }
 
-    // Paso 2: Llenar arreglos de x (meses) e y (gastos)
-    double x[12], y[12];
+    // Paso 2: preparar datos para regresión lineal
     int n = 0;
-    for (int i = 0; i < 12; i++) {
-        if (gastosMensuales[i] > 0) {
-            x[n] = i + 1; // Mes 1 a 12
-            y[n] = gastosMensuales[i];
+    float x[semanasMax], y[semanasMax];
+
+    for (int i = 0; i < semanasMax; i++) {
+        if (gastoSemanal[i] > 0) {
+            x[n] = i + 1;  // semana 1, 2, ...
+            y[n] = gastoSemanal[i];
             n++;
         }
     }
 
-    if (n >= 2) {
-        ModeloLineal modelo = calcular_regresion(x, y, n);
-        double gasto_predicho = modelo.pendiente * (x[n - 1] + 1) + modelo.intercepto;
+    if (n < 2) return -1; // no hay suficientes datos
 
-        // Determinar el nombre del próximo mes
-        const char* meses[] = {"enero", "febrero", "marzo", "abril", "mayo", "junio",
-                               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"};
-        int siguiente_mes = (int)x[n - 1]; // x[n-1] ya es el número de mes actual (1-12)
-        if (siguiente_mes < 12) siguiente_mes++;
-        const char* mes_predicho = meses[siguiente_mes - 1]; // 0-indexado
-
-
-        printf("Según el análisis de tus últimos %d meses, se predice un gasto de $%.0f para %s.\n",
-               n, gasto_predicho, mes_predicho);
-    } else {
-        printf("No hay suficiente historial para hacer una predicción.\n");
+    // Regresión lineal: y = a*x + b
+    float sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
+    for (int i = 0; i < n; i++) {
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += x[i] * y[i];
+        sum_x2 += x[i] * x[i];
     }
 
-      
+    float a = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+    float b = (sum_y - a * sum_x) / n;
 
+    float siguiente_semana = x[n - 1] + 1;
+    return a * siguiente_semana + b;
 }
-
 
 // Función para limpiar la pantalla
 void limpiarPantalla() { system("clear"); }
@@ -506,54 +526,48 @@ void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
     fclose(archivo);
 }
 
+// Función para verificar si el insumo ya está en el HashMap
+int existeInsumoEnHashMap(Insumo insumo) {
+    // Buscar en la tabla 'fecha' del HashMap
+    unsigned int idx = hashFecha(insumo.fecha);
+    Nodo *nodo = hashMap.tabla_fecha[idx];
+    while (nodo) {
+        if (strcmp(nodo->insumo.fecha, insumo.fecha) == 0 &&
+            strcmp(nodo->insumo.categoria, insumo.categoria) == 0 &&
+            strcmp(nodo->insumo.producto, insumo.producto) == 0 &&
+            nodo->insumo.cantidad == insumo.cantidad &&
+            nodo->insumo.valor_total == insumo.valor_total) {
+            return 1; // El insumo ya existe en el HashMap
+        }
+        nodo = nodo->siguiente;
+    }
+    return 0; // El insumo no existe en el HashMap
+}
 
 void guardarTodosLosInsumosEnCSV(const char *nombreArchivo) {
-    FILE *archivo = fopen(nombreArchivo, "a"); // Usamos "a" para agregar insumos nuevos
-    if (!archivo) {
-        return;  // No se pudo abrir el archivo para escritura
-    }
-
-    // Abrir archivo en modo lectura para verificar duplicados
-    FILE *archivoLectura = fopen(nombreArchivo, "r");
-    if (!archivoLectura) {
-        fclose(archivo);
-        return;  // No se pudo abrir el archivo para lectura
-    }
-
-    char linea[255];
-    char *fecha, *categoria, *producto;
-    int cantidad, valor_total;
-
-    // Leer el archivo y verificar si el insumo ya está en el archivo
-    while (fgets(linea, sizeof(linea), archivoLectura)) {
-        // Compara el insumo con los que ya están en el archivo
-        sscanf(linea, "%s,%s,%s,%d,%d", fecha, categoria, producto, &cantidad, &valor_total);
-
-        // Compara con los insumos en memoria (hashMap)
-        for (int i = 0; i < totalInsumos; i++) {
-            if (strcmp(insumos[i].fecha, fecha) == 0 && 
-                strcmp(insumos[i].categoria, categoria) == 0 && 
-                strcmp(insumos[i].producto, producto) == 0) {
-                // Si el insumo ya está en el archivo, no lo agregamos
-                fclose(archivoLectura);
-                fclose(archivo);
-                return;
-            }
-        }
-    }
+    FILE *archivo = fopen(nombreArchivo, "a"); // Abrimos el archivo en modo 'append'
+    if (!archivo) return;
 
     for (int i = 0; i < totalInsumos; i++) {
-        fprintf(archivo, "%s,%s,%s,%d,%d\n", 
-                insumos[i].fecha,
-                insumos[i].categoria,
-                insumos[i].producto,
-                insumos[i].cantidad,
-                insumos[i].valor_total);
+        // Verificar si el insumo ya existe en el HashMap antes de escribirlo
+        if (!existeInsumoEnHashMap(insumos[i])) {
+            fprintf(archivo, "%s,%s,%s,%d,%d\n",
+                    insumos[i].fecha,
+                    insumos[i].categoria,
+                    insumos[i].producto,
+                    insumos[i].cantidad,
+                    insumos[i].valor_total);
+            // Agregarlo al HashMap para evitar que se vuelva a guardar
+            insertarEnTabla(hashMap.tabla_fecha, hashFechaPtr, insumos[i].fecha, insumos[i]);
+            insertarEnTabla(hashMap.tabla_categoria, hashStrPtr, insumos[i].categoria, insumos[i]);
+            insertarEnTabla(hashMap.tabla_producto, hashStrPtr, insumos[i].producto, insumos[i]);
+            insertarEnTabla(hashMap.tabla_cantidad, hashCantidadPtr, &insumos[i].cantidad, insumos[i]);
+            insertarEnTabla(hashMap.tabla_valor_total, hashValorTotalPtr, &insumos[i].valor_total, insumos[i]);
+        }
     }
-
-    fclose(archivoLectura);  // Cerrar archivo de lectura
-    fclose(archivo);         // Cerrar archivo de escritura
+    fclose(archivo);
 }
+
 int insumo_categoria_lower_than(void* a, void* b) {
     Insumo* ia = (Insumo*)a;
     Insumo* ib = (Insumo*)b;

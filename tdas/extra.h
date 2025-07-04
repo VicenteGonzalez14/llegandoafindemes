@@ -44,6 +44,7 @@ int string_lower_than(void *a, void *b);
 
 void mostrarBoletinSemanal();
 void mostrarBoletinMensual();
+float predecirGastoSemanal();
 char **leer_linea_csv(FILE *archivo, char separador);
 List *split_string(const char *str, const char *delim);
 void limpiarPantalla();
@@ -62,4 +63,6 @@ void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, in
 unsigned int hashStr(const char* clave);
 unsigned int hashFecha(const char* fecha);
 int insumo_categoria_lower_than(void* a, void* b);
+int existeInsumoEnHashMap(Insumo insumo);
+
 #endif
