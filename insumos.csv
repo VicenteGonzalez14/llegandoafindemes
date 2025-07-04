@@ -1,5 +1,50 @@
-2025-05-17,Alimentos,dulce,1,800
 2025-05-18,Alimentos,pan,1,2000
+2025-05-20,Higiene,shampoo,1,7000
+2025-05-20,Higiene,jabon,1,5000
+2025-05-21,Higiene,Papel Higienico,8,6000
+2025-06-15,Electrodomesticos,microondas,1,100000
+2025-05-17,Higiene,confort,1,1000
+2025-07-04, Alimentos, Aceite de oliva,1,7000
+2025-07-05, Alimentos, Tomates,3,1500
+2025-07-06, Higiene, Crema dental,2,1200
+2025-07-07, Alimentos, Pescado,2,8000
+2025-07-08, Alimentos, Pera,1,1500
+2025-07-09, Electrodomesticos, Plancha,1,15000
+2025-07-10, Vestimenta, Suéter,1,20000
+2025-07-12, Alimentos, Manzanas,3,1800
+2025-07-13, Higiene, Desodorante,2,3000
+2025-07-14, Alimentos, Leche de almendras,3,4000
+2025-07-16, Alimentos, Papas fritas,2,2000
+2025-07-17, Alimentos, Carne de cerdo,2,10000
+2025-07-18, Electrodomesticos, Aspiradora,1,35000
+2025-07-19, Alimentos, Lentejas,3,2500
+2025-07-20, Alimentos, Pan integral,2,1500
+2025-07-21, Higiene, Gel de baño,2,2500
+2025-07-23, Alimentos, Lechuga,3,1200
+2025-07-24, Electrodomesticos, Ventilador,1,20000
+2025-07-25, Alimentos, Naranjas,2,1800
+2025-07-01, Alimentos, Yogur,3,1200
+2025-07-02, Alimentos, Cereales,2,4000
+2025-07-04, Alimentos, Aceite de oliva,1,7000
+2025-07-05, Alimentos, Tomates,3,1500
+2025-07-06, Higiene, Crema dental,2,1200
+2025-07-07, Alimentos, Pescado,2,8000
+2025-07-08, Alimentos, Pera,1,1500
+2025-07-09, Electrodomesticos, Plancha,1,15000
+2025-07-10, Vestimenta, Suéter,1,20000
+2025-07-12, Alimentos, Manzanas,3,1800
+2025-07-13, Higiene, Desodorante,2,3000
+2025-07-14, Alimentos, Leche de almendras,3,4000
+2025-07-16, Alimentos, Papas fritas,2,2000
+2025-07-17, Alimentos, Carne de cerdo,2,10000
+2025-07-18, Electrodomesticos, Aspiradora,1,35000
+2025-07-19, Alimentos, Lentejas,3,2500
+2025-07-20, Alimentos, Pan integral,2,1500
+2025-07-21, Higiene, Gel de baño,2,2500
+2025-07-23, Alimentos, Lechuga,3,1200
+2025-07-24, Electrodomesticos, Ventilador,1,20000
+2025-06-27,Alimentos,aji,1,500
+2025-07-02,alimento,galletas,1,1200
 2025-05-19,Alimentos,queso,1,5000
 2025-05-22,Mascotas,correa de perro,1,12000
 2025-05-24,Alimentos,agua,1,500
@@ -11,8 +56,6 @@
 2025-05-17,Alimentos,McDonalds,1,10000
 2025-05-19,Alimentos,pollo,1,20000
 2025-05-20,Alimentos,ensalada,1,5000
-2025-05-20,Higiene,shampoo,1,7000
-2025-05-20,Higiene,jabon,1,5000
 2025-05-23,Mascotas,Comida de perro,1,35000
 2025-05-24,Alimentos,carne molida,1,15000
 2025-05-25,Tecnologia,mouse,1,20000
@@ -20,13 +63,10 @@
 2025-05-18,Vestimenta,camiseta,1,20000
 2025-05-19,Tecnologia,teclado,1,30000
 2025-05-17,Mascotas,Casa perro,1,150000
-2025-05-21,Higiene,Papel Higienico,8,6000
 2025-05-22,Alimentos,Carne,2,40000
 2025-05-28,Tecnologia,celular,1,450000
 2025-06-10,Vestimenta,Chaqueta,1,50000
-2025-06-15,Electrodomesticos,microondas,1,100000
 2025-06-16,Tecnologia,reloj inteligente,1,200000
-2025-05-17,Higiene,confort,1,1000
 2025-05-18,Tecnologia,audifonos,1,2500
 2025-05-12,Alimentos,chocolate,2,4000
 2025-05-13,Mascotas,churu,1,3000
@@ -37,50 +77,10 @@
 2025-07-01, Alimentos, Yogur,3,1200
 2025-07-02, Alimentos, Cereales,2,4000
 2025-07-03, Tecnologia, Mouse inalámbrico,1,8000
-2025-07-04, Alimentos, Aceite de oliva,1,7000
-2025-07-05, Alimentos, Tomates,3,1500
-2025-07-06, Higiene, Crema dental,2,1200
-2025-07-07, Alimentos, Pescado,2,8000
-2025-07-08, Alimentos, Pera,1,1500
-2025-07-09, Electrodomesticos, Plancha,1,15000
-2025-07-10, Vestimenta, Suéter,1,20000
 2025-07-11, Tecnologia, Tablet,1,220000
-2025-07-12, Alimentos, Manzanas,3,1800
-2025-07-13, Higiene, Desodorante,2,3000
-2025-07-14, Alimentos, Leche de almendras,3,4000
 2025-07-15, Tecnologia, Cámara web,1,15000
-2025-07-16, Alimentos, Papas fritas,2,2000
-2025-07-17, Alimentos, Carne de cerdo,2,10000
-2025-07-18, Electrodomesticos, Aspiradora,1,35000
-2025-07-19, Alimentos, Lentejas,3,2500
-2025-07-20, Alimentos, Pan integral,2,1500
-2025-07-21, Higiene, Gel de baño,2,2500
 2025-07-22, Tecnologia, Disco duro externo,1,30000
-2025-07-23, Alimentos, Lechuga,3,1200
-2025-07-24, Electrodomesticos, Ventilador,1,20000
-2025-07-25, Alimentos, Naranjas,2,1800
-2025-07-01, Alimentos, Yogur,3,1200
-2025-07-02, Alimentos, Cereales,2,4000
 2025-07-03, Tecnologia, Mouse inalámbrico,1,8000
-2025-07-04, Alimentos, Aceite de oliva,1,7000
-2025-07-05, Alimentos, Tomates,3,1500
-2025-07-06, Higiene, Crema dental,2,1200
-2025-07-07, Alimentos, Pescado,2,8000
-2025-07-08, Alimentos, Pera,1,1500
-2025-07-09, Electrodomesticos, Plancha,1,15000
-2025-07-10, Vestimenta, Suéter,1,20000
 2025-07-11, Tecnologia, Tablet,1,220000
-2025-07-12, Alimentos, Manzanas,3,1800
-2025-07-13, Higiene, Desodorante,2,3000
-2025-07-14, Alimentos, Leche de almendras,3,4000
 2025-07-15, Tecnologia, Cámara web,1,15000
-2025-07-16, Alimentos, Papas fritas,2,2000
-2025-07-17, Alimentos, Carne de cerdo,2,10000
-2025-07-18, Electrodomesticos, Aspiradora,1,35000
-2025-07-19, Alimentos, Lentejas,3,2500
-2025-07-20, Alimentos, Pan integral,2,1500
-2025-07-21, Higiene, Gel de baño,2,2500
 2025-07-22, Tecnologia, Disco duro externo,1,30000
-2025-07-23, Alimentos, Lechuga,3,1200
-2025-07-24, Electrodomesticos, Ventilador,1,20000
-2025-06-27,Alimentos,aji,1,500

@@ -108,12 +108,12 @@ int main() {
                 printf("Opción inválida.\n");
         }
 
-        if (opcion != 5) {
+        if (opcion != 6) {
             presioneTeclaParaContinuar();
             limpiarPantalla();
         }
 
-    } while(opcion != 5);
+    } while(opcion != 6);
 
     liberar_mapa(mapa);
     return 0;
