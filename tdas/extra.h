@@ -10,10 +10,10 @@
 #include "map.h"
 
 // Constantes
-#define MAX_LINEA_CSV 1024  // Para lectura de CSV
-#define MAX_CATEGORIA 20
-#define MAX_PRODUCTO  20
-#define MAX_FECHA     11
+#define MAX_LINEA_CSV 1024  // Longitud máxima para una línea CSV
+#define MAX_CATEGORIA 50
+#define MAX_PRODUCTO  50
+#define MAX_FECHA     11    // Formato: YYYY-MM-DD + '\0'
 
 typedef struct {
     char fecha[MAX_FECHA];
@@ -23,30 +23,37 @@ typedef struct {
     int valor_total;
 } Insumo;
 
-// Funciones del Mapa 
-int compare_keys(void* key1, void* key2);  // Para strcmp
+// --------------------- MAPAS ---------------------
+int compare_keys(void* key1, void* key2);  // strcmp
+int string_lower_than(void *a, void *b);   // strcmp ordenado
+int is_equal_string(void *a, void *b);     // strcmp igualdad
+
 void insertar_insumo(Map* map, Insumo* insumo);
 List* obtener_insumos_por_categoria(Map* map, const char* categoria);
 void liberar_mapa(Map* map);
 
-// CSV y Datos
+// --------------------- CSV ---------------------
 char** leer_linea_csv(FILE *archivo, char separador);
 void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo);
-List* split_string(const char *str, const char *delim);
+void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo);
 
-// Visualización
-void mostrar_insumo(const Insumo* insumo);  // Nueva función útil
+// --------------------- VISUALIZACIÓN ---------------------
+void mostrar_insumo(const Insumo* insumo);  // Recomendado: para uso común
 void mostrar_insumos_por_categoria(Map* map, const char* categoria);
-void mostrarBoletinSemanal(Map* map);       // Ahora recibe Map*
-void mostrarBoletinMensual(Map* map);       // Ahora recibe Map*
+void mostrarBoletinSemanal(Map* map);
+void mostrarBoletinMensual(Map* map);
 
-// Utilidades
+// --------------------- UTILIDADES ---------------------
 void limpiarPantalla();
 void presioneTeclaParaContinuar();
-float predecirGastoSemanal(Map* map);       // Actualizada
 
-// Comparadores 
-int string_lower_than(void *a, void *b);
+// --------------------- PREDICCIÓN ---------------------
+float predecirGastoSemanalDesdeMapa(Map* map);
+
+// --------------------- COMPARADORES ---------------------
 int insumo_categoria_lower_than(void* a, void* b);
+
+// --------------------- LIBERACIÓN ---------------------
+void liberar_insumo(void* data);  // Para list_clean
 
 #endif
