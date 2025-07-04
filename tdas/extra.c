@@ -6,6 +6,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <limits.h>
+#include "regresion.h"
 #define MAX_LINE_LENGTH 4096
 #define MAX_FIELDS      128
 
@@ -255,225 +256,140 @@ void mostrarBoletinSemanal(Map* map) {
 }
 
 void mostrarBoletinMensual(Map* mapa_principal) {
-    printf("\n--- BOLETÍN MENSUAL ---\n");
+    printf("\n--- BOLETÍN MENSUAL AGRUPADO POR CATEGORÍA ---\n");
 
-    // 1. Configurar rango de fechas (últimos 30 días)
     time_t t_fin = time(NULL);
     time_t t_ini = t_fin - (30 * 24 * 60 * 60);
-    
-    // 2. Estructuras auxiliares
-    Map* gasto_por_categoria = map_create(compare_keys);
-    Map* gasto_por_semana = map_create(compare_keys);
-    Map* detalle_por_dia = map_create(compare_keys);
-    List* fechas_ordenadas = list_create();
-    int total_gastado = 0;
 
-    // 3. Procesar todos los insumos del mapa principal
-    MapPair* categoria_pair = map_first(mapa_principal);
+    Map* resumen = map_create(compare_keys);
+    int total = 0;
+
+    MapPair* cat_pair = map_first(mapa_principal);
+    while (cat_pair != NULL) {
+        List* lista = (List*)cat_pair->value;
+        Insumo* insumo = list_first(lista);
+
+        while (insumo != NULL) {
+            struct tm tm = {0};
+            strptime(insumo->fecha, "%Y-%m-%d", &tm);
+            time_t t_insumo = mktime(&tm);
+            if (t_insumo < t_ini || t_insumo > t_fin) {
+                insumo = list_next(lista);
+                continue;
+            }
+
+            total += insumo->valor_total;
+
+            // Buscar o crear submapa por categoría
+            MapPair* submap = map_search(resumen, insumo->categoria);
+            Map* productos = submap ? (Map*)submap->value : NULL;
+
+            if (!productos) {
+                productos = map_create(compare_keys);
+                map_insert(resumen, strdup(insumo->categoria), productos);
+            }
+
+            // Agrupar por producto dentro de la categoría
+            MapPair* prod_pair = map_search(productos, insumo->producto);
+            Insumo* acumulado = prod_pair ? (Insumo*)prod_pair->value : NULL;
+
+            if (!acumulado) {
+                acumulado = malloc(sizeof(Insumo));
+                *acumulado = *insumo;
+                map_insert(productos, strdup(insumo->producto), acumulado);
+            } else {
+                acumulado->cantidad += insumo->cantidad;
+                acumulado->valor_total += insumo->valor_total;
+            }
+
+            insumo = list_next(lista);
+        }
+        cat_pair = map_next(mapa_principal);
+    }
+
+    printf("\nTotal gastado en el mes: $%d\n", total);
+
+    MapPair* r = map_first(resumen);
+    while (r != NULL) {
+        printf("\nCategoría: %s\n", (char*)r->key);
+        Map* productos = (Map*)r->value;
+        MapPair* p = map_first(productos);
+        while (p != NULL) {
+            Insumo* i = (Insumo*)p->value;
+            printf("  - %s: %d unidades - $%d\n", i->producto, i->cantidad, i->valor_total);
+            p = map_next(productos);
+        }
+        r = map_next(resumen);
+    }
+
+    // Limpiar memoria
+    r = map_first(resumen);
+    while (r != NULL) {
+        Map* productos = (Map*)r->value;
+        MapPair* p = map_first(productos);
+        while (p != NULL) {
+            free(p->value);
+            free(p->key);
+            p = map_next(productos);
+        }
+        map_clean(productos);
+        free(productos);
+        free(r->key);
+        r = map_next(resumen);
+    }
+    map_clean(resumen);
+}
+
+
+float predecirGastoSemanalDesdeMapa(Map* mapa) {
+    Map* gasto_por_semana = map_create(is_equal_string);
+    time_t t_actual = time(NULL);
+
+    MapPair* categoria_pair = map_first(mapa);
     while (categoria_pair != NULL) {
-        List* insumos_categoria = (List*)categoria_pair->value;
-        Insumo* insumo = list_first(insumos_categoria);
-
+        List* lista = (List*)categoria_pair->value;
+        Insumo* insumo = list_first(lista);
         while (insumo != NULL) {
             struct tm tm_insumo = {0};
             strptime(insumo->fecha, "%Y-%m-%d", &tm_insumo);
             time_t t_insumo = mktime(&tm_insumo);
+            int semana = (int)(difftime(t_actual, t_insumo) / (60*60*24*7));
 
-            if (t_insumo >= t_ini && t_insumo <= t_fin) {
-                total_gastado += insumo->valor_total;
+            char clave[20];
+            sprintf(clave, "semana_%d", semana);
 
-                // 3.1. Agrupar por categoría
-                MapPair* cat_pair = map_search(gasto_por_categoria, insumo->categoria);
-                if (cat_pair) {
-                    *(int*)cat_pair->value += insumo->valor_total;
-                } else {
-                    int* total = malloc(sizeof(int));
-                    *total = insumo->valor_total;
-                    map_insert(gasto_por_categoria, strdup(insumo->categoria), total);
-                }
-
-                // 3.2. Agrupar por semana
-                int semana = tm_insumo.tm_yday / 7;
-                char clave_semana[15];
-                sprintf(clave_semana, "Semana %d", semana + 1);
-                
-                MapPair* sem_pair = map_search(gasto_por_semana, clave_semana);
-                if (sem_pair) {
-                    *(int*)sem_pair->value += insumo->valor_total;
-                } else {
-                    int* total = malloc(sizeof(int));
-                    *total = insumo->valor_total;
-                    map_insert(gasto_por_semana, strdup(clave_semana), total);
-                }
-
-                // 3.3. Detalle por día
-                MapPair* dia_pair = map_search(detalle_por_dia, insumo->fecha);
-                List* lista_dia = dia_pair ? (List*)dia_pair->value : NULL;
-                
-                if (!lista_dia) {
-                    lista_dia = list_create();
-                    map_insert(detalle_por_dia, strdup(insumo->fecha), lista_dia);
-                    list_sortedInsert(fechas_ordenadas, strdup(insumo->fecha), string_lower_than);
-                }
-                
-                Insumo* copia_insumo = malloc(sizeof(Insumo));
-                *copia_insumo = *insumo; // Copia segura
-                list_pushBack(lista_dia, copia_insumo);
+            MapPair* p = map_search(gasto_por_semana, clave);
+            if (p) *(int*)p->value += insumo->valor_total;
+            else {
+                int* gasto = malloc(sizeof(int));
+                *gasto = insumo->valor_total;
+                map_insert(gasto_por_semana, strdup(clave), gasto);
             }
-            insumo = list_next(insumos_categoria);
+            insumo = list_next(lista);
         }
-        categoria_pair = map_next(mapa_principal);
+        categoria_pair = map_next(mapa);
     }
 
-    // 4. Mostrar resultados
-    printf("\nTotal gastado: $%d\n", total_gastado);
-
-    // 4.1. Top 3 categorías
-    printf("\n🔝 Top 3 categorías:\n");
-    char* top_categorias[3] = {NULL};
-    int top_montos[3] = {0};
-
-    MapPair* pair = map_first(gasto_por_categoria);
-    while (pair != NULL) {
-        int monto = *(int*)pair->value;
-        for (int i = 0; i < 3; i++) {
-            if (monto > top_montos[i]) {
-                for (int j = 2; j > i; j--) {
-                    top_montos[j] = top_montos[j-1];
-                    top_categorias[j] = top_categorias[j-1];
-                }
-                top_montos[i] = monto;
-                top_categorias[i] = pair->key;
-                break;
-            }
-        }
-        pair = map_next(gasto_por_categoria);
+    int n = map_size(gasto_por_semana);
+    if (n < 2) {
+        map_clean(gasto_por_semana);
+        return -1;
     }
 
-    for (int i = 0; i < 3 && top_categorias[i]; i++) {
-        printf("%d. %-15s $%d\n", i+1, top_categorias[i], top_montos[i]);
-    }
-
-    // 4.2. Gasto por semana
-    printf("\n📅 Gasto semanal:\n");
-    pair = map_first(gasto_por_semana);
-    while (pair != NULL) {
-        printf("• %-12s: $%d\n", (char*)pair->key, *(int*)pair->value);
+    double x[n], y[n];
+    int i = 0;
+    MapPair* pair = map_first(gasto_por_semana);
+    while (pair != NULL && i < n) {
+        x[i] = i + 1;
+        y[i] = *(int*)pair->value;
+        i++;
         pair = map_next(gasto_por_semana);
     }
 
-    // 4.3. Detalle diario
-    printf("\n📆 Detalle diario:\n");
-    char* meses[] = {"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-                     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"};
-    char mes_actual[20] = "";
-
-    char* fecha_str = list_first(fechas_ordenadas);
-    while (fecha_str != NULL) {
-        struct tm tm = {0};
-        strptime(fecha_str, "%Y-%m-%d", &tm);
-        const char* mes_nombre = meses[tm.tm_mon];
-
-        // Encabezado de mes
-        if (strcmp(mes_actual, mes_nombre) != 0) {
-            printf("\n%s %d:\n", mes_nombre, tm.tm_year + 1900);
-            strcpy(mes_actual, mes_nombre);
-        }
-
-        // Detalle del día
-        MapPair* dia_pair = map_search(detalle_por_dia, fecha_str);
-        if (dia_pair) {
-            List* insumos_dia = (List*)dia_pair->value;
-            Insumo* insumo = list_first(insumos_dia);
-            
-            while (insumo != NULL) {
-                printf("  • %02d/%02d: %-20s %2d x $%d\n", 
-                       tm.tm_mday, tm.tm_mon + 1,
-                       insumo->producto, 
-                       insumo->cantidad,
-                       insumo->valor_total);
-                insumo = list_next(insumos_dia);
-            }
-        }
-        fecha_str = list_next(fechas_ordenadas);
-    }
-
-    // 5. Liberar memoria
-    map_clean(gasto_por_categoria);
+    ModeloLineal modelo = calcular_regresion(x, y, n);
     map_clean(gasto_por_semana);
-    
-    // Liberar detalle_por_dia (requiere liberar las listas internas primero)
-    MapPair* dia_pair = map_first(detalle_por_dia);
-    while (dia_pair != NULL) {
-        List* lista = (List*)dia_pair->value;
-        list_clean(lista, liberar_insumo); // Liberar insumos de la lista
-        free(dia_pair->key);
-        dia_pair = map_next(detalle_por_dia);
-    }
-    map_clean(detalle_por_dia);
-    
-    list_clean(fechas_ordenadas);
-}
 
-
-float predecirGastoSemanal() {
-    // Paso 1: agrupar los gastos semanales
-    int semanasMax = 10;
-    int semanaActual = 0;
-    int gastoSemanal[semanasMax];
-    memset(gastoSemanal, 0, sizeof(gastoSemanal));
-
-    // Obtener la fecha actual
-    time_t t_actual = time(NULL);
-    struct tm *fecha_actual = localtime(&t_actual);
-
-    for (int i = 0; i < totalInsumos; i++) {
-        struct tm fecha = {0};
-        int anio, mes, dia;
-        sscanf(insumos[i].fecha, "%d-%d-%d", &anio, &mes, &dia);
-        fecha.tm_year = anio - 1900;
-        fecha.tm_mon = mes - 1;
-        fecha.tm_mday = dia;
-
-        time_t t_insumo = mktime(&fecha);
-        double dias_diferencia = difftime(t_actual, t_insumo) / (60 * 60 * 24);
-
-        int semana = (int)(dias_diferencia / 7);
-        if (semana < semanasMax)
-            gastoSemanal[semana] += insumos[i].valor_total;
-
-        if (semana > semanaActual)
-            semanaActual = semana;
-    }
-
-    // Paso 2: preparar datos para regresión lineal
-    int n = 0;
-    float x[semanasMax], y[semanasMax];
-
-    for (int i = 0; i < semanasMax; i++) {
-        if (gastoSemanal[i] > 0) {
-            x[n] = i + 1;  // semana 1, 2, ...
-            y[n] = gastoSemanal[i];
-            n++;
-        }
-    }
-
-    if (n < 2) return -1; // no hay suficientes datos
-
-    // Regresión lineal: y = a*x + b
-    float sum_x = 0, sum_y = 0, sum_xy = 0, sum_x2 = 0;
-    for (int i = 0; i < n; i++) {
-        sum_x += x[i];
-        sum_y += y[i];
-        sum_xy += x[i] * y[i];
-        sum_x2 += x[i] * x[i];
-    }
-
-    float a = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-    float b = (sum_y - a * sum_x) / n;
-
-    float siguiente_semana = x[n - 1] + 1;
-    return a * siguiente_semana + b;
+    return modelo.pendiente * (n + 1) + modelo.intercepto;
 }
 
 // Función para limpiar la pantalla
