@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
-#include "extra.h"
-#include "map.h"
-#include "list.h"
+#include "tdas/extra.h"
+#include "tdas/map.h"
+#include "tdas/list.h"
 
 int saldo = 0;
 

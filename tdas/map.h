@@ -19,5 +19,7 @@ MapPair *map_search(Map *map, void *key);
 MapPair *map_first(Map *map);
 MapPair *map_next(Map *map);
 void map_clean(Map *map);
+int map_size(Map* map);
+
 
 #endif /* MAP_H */

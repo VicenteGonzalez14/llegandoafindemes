@@ -79,6 +79,10 @@ MapPair *map_search(Map *map, void *key) {
   return NULL;
 }
 
+int map_size(Map* map) {
+    return list_size(map->ls);
+}
+
 MapPair *map_first(Map *map) { return list_first(map->ls); }
 
 MapPair *map_next(Map *map) { return list_next(map->ls); }

@@ -4,6 +4,8 @@
         "extra.h": "c",
         "stdio.h": "c",
         "functional": "c",
-        "locale.h": "c"
+        "locale.h": "c",
+        "map.h": "c",
+        "regresion.h": "c"
     }
 }

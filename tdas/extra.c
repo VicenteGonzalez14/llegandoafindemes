@@ -264,7 +264,7 @@ void mostrarBoletinMensual(Map* mapa_principal) {
     time_t t_fin = time(NULL);
     time_t t_ini = t_fin - (30 * 24 * 60 * 60);
 
-    Map* resumen = map_create(compare_keys);
+    Map* resumen = map_create(is_equal_string);
     int total = 0;
 
     MapPair* cat_pair = map_first(mapa_principal);
