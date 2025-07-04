@@ -1,68 +1,52 @@
 #ifndef EXTRA_H
 #define EXTRA_H
-#define HASH_SIZE 1000  // Tamaño de la tabla hash
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <time.h> 
 #include "list.h"
+#include "map.h"
 
-#define MAX_INSUMOS 10000
+// Constantes
+#define MAX_LINEA_CSV 1024  // Para lectura de CSV
+#define MAX_CATEGORIA 20
+#define MAX_PRODUCTO  20
+#define MAX_FECHA     11
 
 typedef struct {
-    char fecha[11];
-    char categoria[20];
-    char producto[20];
+    char fecha[MAX_FECHA];
+    char categoria[MAX_CATEGORIA];
+    char producto[MAX_PRODUCTO];
     int cantidad;
     int valor_total;
 } Insumo;
 
-typedef struct Nodo {
-    Insumo insumo;
-    struct Nodo* siguiente;
-} Nodo;
+// Funciones del Mapa 
+int compare_keys(void* key1, void* key2);  // Para strcmp
+void insertar_insumo(Map* map, Insumo* insumo);
+List* obtener_insumos_por_categoria(Map* map, const char* categoria);
+void liberar_mapa(Map* map);
 
-// Mapa hash para los insumos (una tabla de listas enlazadas)
-typedef struct {
-    Nodo **tabla_fecha;
-    Nodo **tabla_categoria;
-    Nodo **tabla_producto;
-    Nodo **tabla_cantidad;
-    Nodo **tabla_valor_total;
-    int capacidad;
-    int elementos;
-} HashMap;
+// CSV y Datos
+char** leer_linea_csv(FILE *archivo, char separador);
+void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo);
+List* split_string(const char *str, const char *delim);
 
-extern Insumo insumos[MAX_INSUMOS];
-extern int totalInsumos;
-extern HashMap hashMap; 
+// Visualización
+void mostrar_insumo(const Insumo* insumo);  // Nueva función útil
+void mostrar_insumos_por_categoria(Map* map, const char* categoria);
+void mostrarBoletinSemanal(Map* map);       // Ahora recibe Map*
+void mostrarBoletinMensual(Map* map);       // Ahora recibe Map*
 
-
-
-int string_lower_than(void *a, void *b);
-
-void mostrarBoletinSemanal();
-void mostrarBoletinMensual();
-float predecirGastoSemanal();
-char **leer_linea_csv(FILE *archivo, char separador);
-List *split_string(const char *str, const char *delim);
+// Utilidades
 void limpiarPantalla();
 void presioneTeclaParaContinuar();
-void cargarDatasetDesdeCSV(const char *nombreArchivo);
-void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo);
-void guardarTodosLosInsumosEnCSV(const char *nombreArchivo);
-void insertarEnTabla(Nodo* tabla[], unsigned int (*func_hash)(const void*), const void* clave, Insumo insumo);
-unsigned int hashFechaPtr(const void* ptr);
-unsigned int hashStrPtr(const void* ptr);
-unsigned int hashCantidadPtr(const void* ptr);
-unsigned int hashValorTotalPtr(const void* ptr);
-void redimensionarHashMap(HashMap *mapa, int nueva_capacidad);
-void rehashTablaStr(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(const char*), const char* (*obtenerClave)(const Insumo*));
-void rehashTablaInt(Nodo** tablaVieja, int capacidadVieja, Nodo** tablaNueva, int nueva_capacidad, unsigned int (*func_hash)(int), int (*obtenerClave)(const Insumo*));
-unsigned int hashStr(const char* clave);
-unsigned int hashFecha(const char* fecha);
+float predecirGastoSemanal(Map* map);       // Actualizada
+
+// Comparadores 
+int string_lower_than(void *a, void *b);
 int insumo_categoria_lower_than(void* a, void* b);
-int existeInsumoEnHashMap(Insumo insumo);
 
 #endif
