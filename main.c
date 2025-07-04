@@ -72,9 +72,10 @@ int main() {
         printf("\n--- MENU PRINCIPAL ---\n");
         printf("1. Cargar dinero\n");
         printf("2. Agregar insumo\n");
-        printf("3. Mostrar boletín mensual\n");
-        printf("4. Predecir gasto semanal\n");
-        printf("5. Salir\n");
+        printf("3. Mostrar boletín semanal\n");
+        printf("4. Mostrar boletín mensual\n");
+        printf("5. Predecir gasto semanal\n");
+        printf("6. Salir\n");
         printf("Seleccione una opción: ");
         scanf("%d", &opcion);
 
@@ -86,9 +87,12 @@ int main() {
                 agregarInsumo(mapa);
                 break;
             case 3:
+                mostrarBoletinSemanal(mapa);
+                break;
+            case 4:
                 mostrarBoletinMensual(mapa);
                 break;
-            case 4: {
+            case 5: {
                 float prediccion = predecirGastoSemanalDesdeMapa(mapa);
                 if (prediccion >= 0)
                     printf("Gasto estimado para la próxima semana: $%.2f\n", prediccion);
@@ -96,7 +100,7 @@ int main() {
                     printf("No hay suficientes datos para predecir.\n");
                 break;
             }
-            case 5:
+            case 6:
                 printf("Saliendo del programa...\n");
                 break;
             default:
