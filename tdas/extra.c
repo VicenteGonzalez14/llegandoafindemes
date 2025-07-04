@@ -396,7 +396,13 @@ float predecirGastoSemanalDesdeMapa(Map* mapa) {
 }
 
 // Función para limpiar la pantalla
-void limpiarPantalla() { system("clear"); }
+void limpiarPantalla() {
+    #ifdef _WIN32
+        system("cls");
+    #else
+        system("clear");
+    #endif
+}
 
 void presioneTeclaParaContinuar() {
   puts("Presione una tecla para continuar...");
@@ -405,36 +411,40 @@ void presioneTeclaParaContinuar() {
 }
 
 void guardarMapaEnCSV(Map* mapa, const char* nombreArchivo) {
-    // Abre el archivo en modo escritura (esto BORRA el contenido anterior)
     FILE *archivo = fopen(nombreArchivo, "w");
     if (!archivo) {
-        printf("Error: No se pudo abrir %s para escritura\n", nombreArchivo);
+        perror("Error al abrir archivo");
         return;
     }
 
-    // Recorre todas las categorías del mapa
+    // Escribir encabezado
+    fprintf(archivo, "fecha,categoria,producto,cantidad,valor_total\n");
+
+    // Contador para verificación
+    int total_insumos = 0;
+
+    // Recorrer todo el mapa
     MapPair *pair = map_first(mapa);
     while (pair != NULL) {
-        List *listaInsumos = (List*)pair->value;
-        Insumo *insumo = list_first(listaInsumos);
+        List *lista = (List*)pair->value;
+        Insumo *insumo = list_first(lista);
         
-        // Escribe todos los insumos de esta categoría
         while (insumo != NULL) {
             fprintf(archivo, "%s,%s,%s,%d,%d\n",
-                    insumo->fecha,
-                    insumo->categoria,
-                    insumo->producto,
-                    insumo->cantidad,
-                    insumo->valor_total);
-            insumo = list_next(listaInsumos);
+                   insumo->fecha,
+                   insumo->categoria,
+                   insumo->producto,
+                   insumo->cantidad,
+                   insumo->valor_total);
+            total_insumos++;
+            insumo = list_next(lista);
         }
         pair = map_next(mapa);
     }
 
     fclose(archivo);
-    printf("Datos guardados exitosamente en %s\n", nombreArchivo);
+    printf("Se guardaron %d insumos correctamente\n", total_insumos);
 }
-
 
 
 int insumo_categoria_lower_than(void* a, void* b) {
