@@ -101,6 +101,7 @@ int main() {
                 break;
             }
             case 6:
+                guardarMapaEnCSV(mapa, "insumos.csv");
                 printf("Saliendo del programa...\n");
                 break;
             default:

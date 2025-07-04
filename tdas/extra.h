@@ -37,7 +37,7 @@ void liberar_mapa(Map* map);
 // --------------------- CSV ---------------------
 char** leer_linea_csv(FILE *archivo, char separador);
 void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo);
-void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo);
+void guardarMapaEnCSV(Map* mapa, const char* nombreArchivo);
 
 // --------------------- VISUALIZACIÓN ---------------------
 void mostrar_insumo(const Insumo* insumo);  // Recomendado: para uso común

@@ -404,19 +404,37 @@ void presioneTeclaParaContinuar() {
   getchar(); // Espera a que el usuario presione una tecla
 }
 
-void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
-    FILE *archivo = fopen(nombreArchivo, "a");
-    if (!archivo) return;
-    fprintf(archivo, "%s,%s,%s,%d,%d\n",
-            insumo->fecha,
-            insumo->categoria,
-            insumo->producto,
-            insumo->cantidad,
-            insumo->valor_total);
+void guardarMapaEnCSV(Map* mapa, const char* nombreArchivo) {
+    // Abre el archivo en modo escritura (esto BORRA el contenido anterior)
+    FILE *archivo = fopen(nombreArchivo, "w");
+    if (!archivo) {
+        printf("Error: No se pudo abrir %s para escritura\n", nombreArchivo);
+        return;
+    }
+
+    // Recorre todas las categorías del mapa
+    MapPair *pair = map_first(mapa);
+    while (pair != NULL) {
+        List *listaInsumos = (List*)pair->value;
+        Insumo *insumo = list_first(listaInsumos);
+        
+        // Escribe todos los insumos de esta categoría
+        while (insumo != NULL) {
+            fprintf(archivo, "%s,%s,%s,%d,%d\n",
+                    insumo->fecha,
+                    insumo->categoria,
+                    insumo->producto,
+                    insumo->cantidad,
+                    insumo->valor_total);
+            insumo = list_next(listaInsumos);
+        }
+        pair = map_next(mapa);
+    }
+
     fclose(archivo);
+    printf("Datos guardados exitosamente en %s\n", nombreArchivo);
 }
 
-// Función para verificar si el insumo ya está en el HashMap
 
 
 int insumo_categoria_lower_than(void* a, void* b) {
