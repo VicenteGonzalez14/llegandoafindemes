@@ -77,7 +77,12 @@ int main() {
         printf("5. Predecir gasto semanal\n");
         printf("6. Salir\n");
         printf("Seleccione una opción: ");
-        scanf("%d", &opcion);
+        if (scanf("%d", &opcion) != 1) {  // Verificación de entrada
+            printf("Entrada inválida\n");
+            while(getchar() != '\n');  // Limpiar buffer
+            continue;
+        }
+        while(getchar() != '\n');
 
         switch(opcion) {
             case 1:
@@ -102,8 +107,9 @@ int main() {
             }
             case 6:
                 guardarMapaEnCSV(mapa, "insumos.csv");
+                liberar_mapa(mapa);
                 printf("Saliendo del programa...\n");
-                break;
+                return 0; 
             default:
                 printf("Opción inválida.\n");
         }
@@ -115,6 +121,5 @@ int main() {
 
     } while(opcion != 6);
 
-    liberar_mapa(mapa);
     return 0;
 }
