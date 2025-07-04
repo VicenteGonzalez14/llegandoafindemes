@@ -11,6 +11,9 @@
 #define MAX_FIELDS      128
 
 
+int compare_keys(void* a, void* b) {
+    return strcmp((char*)a, (char*)b);
+}
 int string_lower_than(void* a, void* b) {
     return strcmp((char*)a, (char*)b) < 0;
 }

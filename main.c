@@ -3,27 +3,12 @@
 #include <string.h>
 #include <locale.h>
 #include "extra.h"
-#include "list.h"
 #include "map.h"
+#include "list.h"
 
 int saldo = 0;
 
-// Función para cargar dinero
-void cargarDinero() {
-    int monto;
-    printf("\nIngrese el monto a cargar: ");
-    scanf("%d", &monto);
-
-    if (monto <= 0) {
-        printf("El monto debe ser mayor que cero.\n");
-        return;
-    }
-
-    saldo += monto;
-    printf("Dinero cargado exitosamente. Saldo actual: %d\n", saldo);
-}
-
-// Función para validar fecha en formato YYYY-MM-DD
+// Valida formato fecha YYYY-MM-DD
 int esFechaValida(const char* fecha) {
     int anio, mes, dia;
     if (sscanf(fecha, "%4d-%2d-%2d", &anio, &mes, &dia) != 3)
@@ -34,10 +19,22 @@ int esFechaValida(const char* fecha) {
     return 1;
 }
 
-// Función para agregar insumo (versión simplificada)
-void agregarInsumo(HashMap* mapa) {
+// Cargar dinero
+void cargarDinero() {
+    int monto;
+    printf("\nIngrese monto a cargar: ");
+    scanf("%d", &monto);
+    if (monto <= 0) {
+        printf("Monto inválido.\n");
+        return;
+    }
+    saldo += monto;
+    printf("Saldo actual: $%d\n", saldo);
+}
+
+// Agregar insumo
+void agregarInsumo(Map* mapa) {
     Insumo* nuevo = malloc(sizeof(Insumo));
-    
     printf("\nIngrese fecha (YYYY-MM-DD): ");
     scanf("%10s", nuevo->fecha);
     if (!esFechaValida(nuevo->fecha)) {
@@ -48,39 +45,37 @@ void agregarInsumo(HashMap* mapa) {
 
     printf("Ingrese categoría: ");
     scanf("%19s", nuevo->categoria);
-    
+
     printf("Ingrese producto: ");
     scanf("%19s", nuevo->producto);
-    
+
     printf("Ingrese cantidad: ");
     scanf("%d", &nuevo->cantidad);
-    
+
     printf("Ingrese valor total: ");
     scanf("%d", &nuevo->valor_total);
 
     insertar_insumo(mapa, nuevo);
-    printf("Insumo agregado exitosamente.\n");
+    printf("Insumo agregado correctamente.\n");
 }
 
 int main() {
     setlocale(LC_ALL, "");
 
-    // Crear el mapa principal
     Map* mapa = map_create(compare_keys);
     saldo = 0;
 
-    // Cargar datos iniciales
     cargarDatasetDesdeCSV(mapa, "insumos.csv");
 
     int opcion;
     do {
         printf("\n--- MENU PRINCIPAL ---\n");
-        printf("1. Cargar dinero a la billetera\n");
+        printf("1. Cargar dinero\n");
         printf("2. Agregar insumo\n");
-        printf("3. Mostrar boletines semanales\n");
-        printf("4. Mostrar boletin mensual\n");
+        printf("3. Mostrar boletín mensual\n");
+        printf("4. Predecir gasto semanal\n");
         printf("5. Salir\n");
-        printf("Seleccione una opcion: ");
+        printf("Seleccione una opción: ");
         scanf("%d", &opcion);
 
         switch(opcion) {
@@ -91,26 +86,30 @@ int main() {
                 agregarInsumo(mapa);
                 break;
             case 3:
-                mostrarBoletinSemanal(mapa);
-                break;
-            case 4:
                 mostrarBoletinMensual(mapa);
                 break;
+            case 4: {
+                float prediccion = predecirGastoSemanalDesdeMapa(mapa);
+                if (prediccion >= 0)
+                    printf("Gasto estimado para la próxima semana: $%.2f\n", prediccion);
+                else
+                    printf("No hay suficientes datos para predecir.\n");
+                break;
+            }
             case 5:
-                // Guardar datos antes de salir
-                // (Implementar según necesidad)
-                printf("Saliendo del programa. ¡Hasta luego!\n");
+                printf("Saliendo del programa...\n");
                 break;
             default:
-                printf("Opción inválida. Intente nuevamente.\n");
+                printf("Opción inválida.\n");
         }
 
-        presioneTeclaParaContinuar();
-        limpiarPantalla();
+        if (opcion != 5) {
+            presioneTeclaParaContinuar();
+            limpiarPantalla();
+        }
 
     } while(opcion != 5);
 
-    // Liberar memoria
     liberar_mapa(mapa);
     return 0;
 }
