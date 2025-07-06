@@ -8,12 +8,16 @@
 #include <time.h> 
 #include "list.h"
 #include "map.h"
-
 // Constantes
 #define MAX_LINEA_CSV 1024  // Longitud máxima para una línea CSV
 #define MAX_CATEGORIA 50
-#define MAX_PRODUCTO  50
+#define MAX_PRODUCTO  128 
 #define MAX_FECHA     11    // Formato: YYYY-MM-DD + '\0'
+
+extern Map* categorias;
+extern Map* productos;
+
+
 
 typedef struct {
     char fecha[MAX_FECHA];

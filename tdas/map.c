@@ -3,13 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct Map {
-  int (*lower_than)(void *key1, void *key2);
-  int (*is_equal)(void *key1, void *key2);
-  List *ls;
-};
 
-typedef Map Map;
 
 // Variable global para almacenar la función de comparación actual
 int (*current_lt)(void *, void *) = NULL;
@@ -18,12 +12,12 @@ int pair_lt(void *pair1, void *pair2) {
   return (current_lt(((MapPair *)pair1)->key, ((MapPair *)pair2)->key));
 }
 
-Map *sorted_map_create(int (*lower_than)(void *key1, void *key2)) {
+Map *sorted_map_create(int (*lower_than)(void *key1, void *key2),
+                       int (*is_equal)(void *key1, void *key2)) {
   Map *newMap = (Map *)malloc(sizeof(Map));
   newMap->lower_than = lower_than;
-  newMap->is_equal = NULL;
+  newMap->is_equal = is_equal;
   newMap->ls = list_create();
-
   return newMap;
 }
 
@@ -82,6 +76,11 @@ MapPair *map_search(Map *map, void *key) {
 int map_size(Map* map) {
     return list_size(map->ls);
 }
+
+void map_set_equal(Map* map, int (*is_equal)(void*, void*)) {
+    map->is_equal = is_equal;
+}
+
 
 MapPair *map_first(Map *map) { return list_first(map->ls); }
 

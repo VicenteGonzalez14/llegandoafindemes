@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
-#include "tdas/extra.h"
 #include "tdas/map.h"
+#include "tdas/extra.h"
 #include "tdas/list.h"
 
 int saldo = 0;
@@ -63,6 +63,8 @@ int main() {
     setlocale(LC_ALL, "");
 
     Map* mapa = map_create(compare_keys);
+    categorias = map_create(is_equal_string);
+    productos = map_create(is_equal_string);
     saldo = 0;
 
     cargarDatasetDesdeCSV(mapa, "insumos.csv");
@@ -111,5 +113,6 @@ int main() {
     } while(opcion != 5);
 
     liberar_mapa(mapa);
+    
     return 0;
 }
