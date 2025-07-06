@@ -148,7 +148,14 @@ void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo) {
     char** campos;
     int insumosCargados = 0;
 
+    // --- SALTAR ENCABEZADO ---
+    leer_linea_csv(archivo, ',');
+
     while ((campos = leer_linea_csv(archivo, ',')) != NULL) {
+        // Omitir líneas vacías o líneas de encabezado repetidas
+        if (!campos[0] || !campos[1] || !campos[2] || !campos[3] || !campos[4]) continue;
+        if (strcmp(campos[0], "fecha") == 0) continue;
+
         // Limpiar espacios en los primeros 3 campos (fecha, categoría, producto)
         for (int i = 0; i < 3 && campos[i]; i++) {
             limpiar_espacios(campos[i]);
@@ -178,12 +185,6 @@ void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo) {
         // Insertar en el mapa agrupador
         insertar_insumo(mapa, nuevoInsumo);
         insumosCargados++;
-
-        // Liberar campos si es necesario
-        for (int i = 0; campos[i]; i++) {
-            free(campos[i]);
-        }
-        free(campos);
     }
 
     fclose(archivo);
@@ -284,52 +285,157 @@ void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char
             pair = map_next(map);
         }
     }
-    void mostrarBoletinSemanal(Map* map) {
-        printf("\n--- BOLETINES SEMANALES ---\n");
+void mostrarBoletinSemanal(Map* mapa_principal) {
+    printf("\n--- BOLETÍN SEMANAL AGRUPADO POR CATEGORÍA, PRODUCTO Y FECHA ---\n");
 
-        // Obtener rango de fechas extremas
-        time_t t_min = LONG_MAX, t_max = 0;
-        MapPair* pair = map_first(map);
-        
-        while (pair != NULL) {
-            List* lista = (List*)pair->value;
+    // Obtener rango de fechas extremas
+    time_t t_min = LONG_MAX, t_max = 0;
+    MapPair* pair = map_first(mapa_principal);
+    while (pair != NULL) {
+        List* lista = (List*)pair->value;
+        Insumo* insumo = list_first(lista);
+        while (insumo != NULL) {
+            struct tm tm = {0};
+            strptime(insumo->fecha, "%Y-%m-%d", &tm);
+            time_t t = mktime(&tm);
+            if (t < t_min) t_min = t;
+            if (t > t_max) t_max = t;
+            insumo = list_next(lista);
+        }
+        pair = map_next(mapa_principal);
+    }
+
+    if (t_min == LONG_MAX) {
+        printf("No hay insumos registrados.\n");
+        return;
+    }
+
+    // Generar reporte semanal
+    for (time_t t_ini = t_min; t_ini <= t_max; t_ini += 7 * 24 * 60 * 60) {
+        struct tm tm_ini = *localtime(&t_ini);
+        struct tm tm_fin = tm_ini;
+        tm_fin.tm_mday += 6;
+        mktime(&tm_fin);
+
+        char fecha_inicio[11], fecha_fin[11];
+        strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_ini);
+        strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_fin);
+
+        printf("\nSemana del %s al %s:\n", fecha_inicio, fecha_fin);
+
+        // Crear mapa de resumen para esta semana
+        Map* resumen = map_create(compare_keys);
+        map_set_equal(resumen, is_equal_string);
+        int total_semana = 0;
+
+        // Procesar insumos para esta semana
+        MapPair* cat_pair = map_first(mapa_principal);
+        while (cat_pair != NULL) {
+            List* lista = (List*)cat_pair->value;
             Insumo* insumo = list_first(lista);
-            
+
             while (insumo != NULL) {
                 struct tm tm = {0};
                 strptime(insumo->fecha, "%Y-%m-%d", &tm);
-                time_t t = mktime(&tm);
+                time_t t_insumo = mktime(&tm);
                 
-                if (t < t_min) t_min = t;
-                if (t > t_max) t_max = t;
-                
+                if (t_insumo >= t_ini && t_insumo <= t_ini + 6*24*60*60) {
+                    // Normaliza producto y categoría
+                    char prod_key[MAX_PRODUCTO], cat_key[MAX_CATEGORIA], fecha_key[11], clave_compuesta[256];
+                    strncpy(prod_key, insumo->producto, MAX_PRODUCTO - 1);
+                    prod_key[MAX_PRODUCTO - 1] = '\0';
+                    limpiar_espacios(prod_key);
+                    for (char* p = prod_key; *p; ++p) *p = tolower(*p);
+
+                    strncpy(cat_key, insumo->categoria, MAX_CATEGORIA - 1);
+                    cat_key[MAX_CATEGORIA - 1] = '\0';
+                    limpiar_espacios(cat_key);
+                    for (char* p = cat_key; *p; ++p) *p = tolower(*p);
+
+                    strncpy(fecha_key, insumo->fecha, 10);
+                    fecha_key[10] = '\0';
+
+                    snprintf(clave_compuesta, sizeof(clave_compuesta), "%s|%s", prod_key, fecha_key);
+
+                    // Mapa de categorías
+                    Map* submap = NULL;
+                    MapPair* submap_pair = map_search(resumen, cat_key);
+                    if (submap_pair) {
+                        submap = (Map*)submap_pair->value;
+                    } else {
+                        submap = map_create(compare_keys);
+                        map_set_equal(submap, is_equal_string);
+                        map_insert(resumen, strdup(cat_key), submap);
+                    }
+
+                    // Agrupa por clave compuesta (producto|fecha)
+                    MapPair* prod_pair = map_search(submap, clave_compuesta);
+                    Insumo* acumulado = prod_pair ? (Insumo*)prod_pair->value : NULL;
+
+                    if (!acumulado) {
+                        acumulado = malloc(sizeof(Insumo));
+                        strncpy(acumulado->categoria, cat_key, MAX_CATEGORIA);
+                        strncpy(acumulado->producto, prod_key, MAX_PRODUCTO);
+                        strncpy(acumulado->fecha, fecha_key, 11);
+                        acumulado->cantidad = insumo->cantidad;
+                        acumulado->valor_total = insumo->valor_total;
+                        map_insert(submap, strdup(clave_compuesta), acumulado);
+                    } else {
+                        acumulado->cantidad += insumo->cantidad;
+                        acumulado->valor_total += insumo->valor_total;
+                    }
+
+                    total_semana += insumo->valor_total;
+                }
                 insumo = list_next(lista);
             }
-            pair = map_next(map);
+            cat_pair = map_next(mapa_principal);
         }
 
-        if (t_min == LONG_MAX) {
-            printf("No hay insumos registrados.\n");
-            return;
+        printf("Total gastado en la semana: $%d\n", total_semana);
+
+        // Imprimir agrupado por categoría, producto y fecha
+        MapPair* cat_it = map_first(resumen);
+        while (cat_it != NULL) {
+            printf("\nCategoría: %s\n", (char*)cat_it->key);
+            Map* submap = (Map*)cat_it->value;
+            MapPair* prod_it = map_first(submap);
+            while (prod_it != NULL) {
+                Insumo* insumo = (Insumo*)prod_it->value;
+                // Separa producto y fecha de la clave compuesta
+                char* sep = strchr((char*)prod_it->key, '|');
+                if (sep) {
+                    *sep = '\0';
+                    printf("  - %s (%s): %d unidades - $%d\n",
+                        (char*)prod_it->key, sep+1, insumo->cantidad, insumo->valor_total);
+                    *sep = '|'; // restaurar
+                } else {
+                    printf("  - %s: %d unidades - $%d\n",
+                        (char*)prod_it->key, insumo->cantidad, insumo->valor_total);
+                }
+                prod_it = map_next(submap);
+            }
+            cat_it = map_next(resumen);
         }
 
-        // Generar reporte semanal
-        for (time_t t_ini = t_min; t_ini <= t_max; t_ini += 7 * 24 * 60 * 60) {
-            struct tm tm_ini = *localtime(&t_ini);
-            struct tm tm_fin = tm_ini;
-            tm_fin.tm_mday += 6;
-            mktime(&tm_fin);
-
-            char fecha_inicio[11], fecha_fin[11];
-            strftime(fecha_inicio, sizeof(fecha_inicio), "%Y-%m-%d", &tm_ini);
-            strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_fin);
-
-            printf("\nSemana del %s al %s:\n", fecha_inicio, fecha_fin);
-            buscarInsumosEnRangoDeFechas(map, fecha_inicio, fecha_fin);
+        // Liberar memoria del resumen de esta semana
+        cat_it = map_first(resumen);
+        while (cat_it != NULL) {
+            Map* submap = (Map*)cat_it->value;
+            MapPair* prod_it = map_first(submap);
+            while (prod_it != NULL) {
+                free(prod_it->value);
+                prod_it = map_next(submap);
+            }
+            map_clean(submap);
+            free(submap);
+            cat_it = map_next(resumen);
         }
+        map_clean(resumen);
     }
+}
 
-    void mostrarBoletinMensual(Map* mapa_principal) {
+void mostrarBoletinMensual(Map* mapa_principal) {
     printf("\n--- BOLETÍN MENSUAL AGRUPADO POR CATEGORÍA, PRODUCTO Y FECHA ---\n");
 
     // Rango fijo: julio 2025
@@ -451,11 +557,11 @@ void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char
 }
 
 
-    float predecirGastoSemanalDesdeMapa(Map* mapa) {
-        Map* gasto_por_semana = map_create(is_equal_string);
-        time_t t_actual = time(NULL);
+float predecirGastoSemanalDesdeMapa(Map* mapa) {
+    Map* gasto_por_semana = map_create(is_equal_string);
+    time_t t_actual = time(NULL);
 
-        MapPair* categoria_pair = map_first(mapa);
+    MapPair* categoria_pair = map_first(mapa);
         while (categoria_pair != NULL) {
             List* lista = (List*)categoria_pair->value;
             Insumo* insumo = list_first(lista);
@@ -511,24 +617,67 @@ void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char
     getchar(); // Espera a que el usuario presione una tecla
     }
 
-    void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
-        FILE *archivo = fopen(nombreArchivo, "a");
-        if (!archivo) return;
-        fprintf(archivo, "%s,%s,%s,%d,%d\n",
-                insumo->fecha,
-                insumo->categoria,
-                insumo->producto,
-                insumo->cantidad,
-                insumo->valor_total);
-        fclose(archivo);
+void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo) {
+    FILE *archivo = fopen(nombreArchivo, "a");
+    if (!archivo) {
+        printf("Error al abrir el archivo para agregar insumo\n");
+        return;
+    }
+    
+    // Si el archivo está vacío, agregar encabezados
+    fseek(archivo, 0, SEEK_END);
+    if (ftell(archivo) == 0) {
+        fprintf(archivo, "fecha,categoria,producto,cantidad,valor_total\n");
+    }
+    
+    fprintf(archivo, "%s,%s,%s,%d,%d\n",
+            insumo->fecha,
+            insumo->categoria,
+            insumo->producto,
+            insumo->cantidad,
+            insumo->valor_total);
+    fclose(archivo);
+}
+
+void guardarTodosInsumosEnCSV(Map* mapa, const char* nombreArchivo) {
+    FILE *archivo = fopen(nombreArchivo, "w");  // Modo escritura (sobrescribe)
+    if (!archivo) {
+        printf("Error al abrir el archivo para escritura: %s\n", nombreArchivo);
+        return;
     }
 
-    // Función para verificar si el insumo ya está en el HashMap
+    // Escribir encabezado
+    fprintf(archivo, "fecha,categoria,producto,cantidad,valor_total\n");
 
-
-    int insumo_categoria_lower_than(void* a, void* b) {
-        Insumo* ia = (Insumo*)a;
-        Insumo* ib = (Insumo*)b;
-        return strcmp(ia->categoria, ib->categoria) < 0;
+    int total_insumos = 0;
+    
+    MapPair* categoria_pair = map_first(mapa);
+    while (categoria_pair != NULL) {
+        List* lista = (List*)categoria_pair->value;
+        Insumo* insumo = list_first(lista);
+        
+        while (insumo != NULL) {
+            fprintf(archivo, "%s,%s,%s,%d,%d\n",
+                    insumo->fecha,
+                    insumo->categoria,
+                    insumo->producto,
+                    insumo->cantidad,
+                    insumo->valor_total);
+            total_insumos++;
+            insumo = list_next(lista);
+        }
+        categoria_pair = map_next(mapa);
     }
+
+    fclose(archivo);
+    printf("Datos guardados correctamente en %s (%d insumos)\n", 
+           nombreArchivo, 
+           total_insumos);
+}
+
+int insumo_categoria_lower_than(void* a, void* b) {
+    Insumo* ia = (Insumo*)a;
+    Insumo* ib = (Insumo*)b;
+    return strcmp(ia->categoria, ib->categoria) < 0;
+}
 

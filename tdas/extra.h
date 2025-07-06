@@ -38,8 +38,6 @@ int compare_keys(void* key1, void* key2);  // strcmp
 int string_lower_than(void *a, void *b);   // strcmp ordenado
 int is_equal_string(void *a, void *b);     // strcmp igualdad
 int compare_keys(void* a, void* b);
-
-
 void insertar_insumo(Map* map, Insumo* insumo);
 List* obtener_insumos_por_categoria(Map* map, const char* categoria);
 void liberar_mapa(Map* map);
@@ -48,6 +46,8 @@ void liberar_mapa(Map* map);
 char** leer_linea_csv(FILE *archivo, char separador);
 void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo);
 void guardarMapaEnCSV(Map* mapa, const char* nombreArchivo);
+void guardarInsumoEnCSV(const Insumo *insumo, const char *nombreArchivo);
+void guardarTodosInsumosEnCSV(Map* mapa, const char* nombreArchivo);
 
 // --------------------- VISUALIZACIÓN ---------------------
 void mostrar_insumo(const Insumo* insumo);  // Recomendado: para uso común
