@@ -58,7 +58,7 @@ void mostrarBoletinMensual(Map* map);
 // --------------------- UTILIDADES ---------------------
 void limpiarPantalla();
 void presioneTeclaParaContinuar();
-void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin, int orden);
+void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin);
 
 // --------------------- PREDICCIÓN ---------------------
 float predecirGastoSemanalDesdeMapa(Map* map);

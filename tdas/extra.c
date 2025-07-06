@@ -254,7 +254,7 @@ void cargarDatasetDesdeCSV(Map* mapa, const char* nombreArchivo) {
 
 
 
-    void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin) {
+void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin) {
         // Convertir fechas a timestamp
         struct tm tm_inicio = {0}, tm_fin = {0};
         strptime(fecha_inicio, "%Y-%m-%d", &tm_inicio);
