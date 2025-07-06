@@ -183,16 +183,41 @@ void insertar_insumo(Map* map, Insumo* insumo) {
     free(clave);
 }
 
-void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin) {
-    // Convertir fechas a timestamp
+time_t fecha_a_timestamp(const char* fecha) {
+    struct tm tm = {0};
+    strptime(fecha, "%Y-%m-%d", &tm);
+    return mktime(&tm);
+}
+
+// Comparadores para ordenamiento
+int compare_insumos_by_fecha(void* a, void* b) {
+    InsumoConTimestamp* itemA = (InsumoConTimestamp*)a;
+    InsumoConTimestamp* itemB = (InsumoConTimestamp*)b;
+    return (itemA->timestamp - itemB->timestamp);
+}
+
+int compare_insumos_by_producto(void* a, void* b) {
+    InsumoConTimestamp* itemA = (InsumoConTimestamp*)a;
+    InsumoConTimestamp* itemB = (InsumoConTimestamp*)b;
+    return strcmp(itemA->insumo->producto, itemB->insumo->producto);
+}
+
+int compare_insumos_by_valor(void* a, void* b) {
+    InsumoConTimestamp* itemA = (InsumoConTimestamp*)a;
+    InsumoConTimestamp* itemB = (InsumoConTimestamp*)b;
+    return (itemB->insumo->valor_total - itemA->insumo->valor_total);
+}
+
+void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin, int orden) {
     struct tm tm_inicio = {0}, tm_fin = {0};
     strptime(fecha_inicio, "%Y-%m-%d", &tm_inicio);
     strptime(fecha_fin, "%Y-%m-%d", &tm_fin);
-    
     time_t t_inicio = mktime(&tm_inicio);
     time_t t_fin = mktime(&tm_fin);
 
-    // Recorrer todas las categorías del mapa
+    List* insumos_filtrados = list_create();
+    Map* totales_categoria = map_create(is_equal_string);
+
     MapPair* pair = map_first(map);
     while (pair != NULL) {
         List* lista_insumos = (List*)pair->value;
@@ -204,19 +229,52 @@ void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char
             time_t t_insumo = mktime(&tm_insumo);
 
             if (t_insumo >= t_inicio && t_insumo <= t_fin) {
-                printf("Insumo [%s]: %s - %d unidades - $%d\n", 
-                       insumo->categoria, insumo->producto, 
-                       insumo->cantidad, insumo->valor_total);
+                // Crear estructura temporal con timestamp
+                InsumoConTimestamp* item = malloc(sizeof(InsumoConTimestamp));
+                item->insumo = insumo;
+                item->timestamp = t_insumo;
+                
+                list_pushBack(insumos_filtrados, item);
+
+                // Actualizar total por categoría
+                int* total = map_search(totales_categoria, insumo->categoria);
+                if (!total) {
+                    total = malloc(sizeof(int));
+                    *total = 0;
+                    map_insert(totales_categoria, strdup(insumo->categoria), total);
+                }
+                *total += insumo->valor_total;
             }
             insumo = list_next(lista_insumos);
         }
         pair = map_next(map);
     }
+
+    // Ordenar según el parámetro
+    switch (orden) {
+        case 0: list_sort(insumos_filtrados, compare_insumos_by_fecha); break;
+        case 1: list_sort(insumos_filtrados, compare_insumos_by_producto); break;
+        case 2: list_sort(insumos_filtrados, compare_insumos_by_valor); break;
+    }
+
+    // Mostrar resultados
+    char* categoria_actual = NULL;
+    InsumoConTimestamp* item = list_first(insumos_filtrados);
+    while (item != NULL) {
+        Insumo* insumo = item->insumo;
+        
+        if (categoria_actual == NULL || strcmp(categoria_actual, insumo->categoria) != 0) {
+            categoria_actual = insumo->categoria;
+            printf("\n--- CATEGORÍA: %s ---\n", categoria_actual);
+        }
+        
+        printf("  - %s: %d unidades - $%d (Fecha: %s)\n", 
+               insumo->producto, insumo->cantidad, insumo->valor_total, insumo->fecha);}
 }
+
 void mostrarBoletinSemanal(Map* map) {
     printf("\n--- BOLETINES SEMANALES ---\n");
 
-    // Obtener rango de fechas extremas
     time_t t_min = LONG_MAX, t_max = 0;
     MapPair* pair = map_first(map);
     
@@ -242,11 +300,18 @@ void mostrarBoletinSemanal(Map* map) {
         return;
     }
 
-    // Generar reporte semanal
+    // Ajustar t_min al inicio de la semana (lunes)
+    struct tm* tm_min = localtime(&t_min);
+    tm_min->tm_hour = 0;
+    tm_min->tm_min = 0;
+    tm_min->tm_sec = 0;
+    tm_min->tm_mday -= (tm_min->tm_wday + 6) % 7; // Retrocede al lunes
+    t_min = mktime(tm_min);
+
     for (time_t t_ini = t_min; t_ini <= t_max; t_ini += 7 * 24 * 60 * 60) {
         struct tm tm_ini = *localtime(&t_ini);
         struct tm tm_fin = tm_ini;
-        tm_fin.tm_mday += 6;
+        tm_fin.tm_mday += 6; // Domingo de la misma semana
         mktime(&tm_fin);
 
         char fecha_inicio[11], fecha_fin[11];
@@ -254,7 +319,7 @@ void mostrarBoletinSemanal(Map* map) {
         strftime(fecha_fin, sizeof(fecha_fin), "%Y-%m-%d", &tm_fin);
 
         printf("\nSemana del %s al %s:\n", fecha_inicio, fecha_fin);
-        buscarInsumosEnRangoDeFechas(map, fecha_inicio, fecha_fin);
+        buscarInsumosEnRangoDeFechas(map, fecha_inicio, fecha_fin, 0); // Orden por fecha
     }
 }
 

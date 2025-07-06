@@ -23,6 +23,12 @@ typedef struct {
     int valor_total;
 } Insumo;
 
+// Estructura temporal para ordenamiento
+typedef struct {
+    Insumo* insumo;
+    time_t timestamp;
+} InsumoConTimestamp;
+
 // --------------------- MAPAS ---------------------
 int compare_keys(void* key1, void* key2);  // strcmp
 int string_lower_than(void *a, void *b);   // strcmp ordenado
@@ -48,12 +54,16 @@ void mostrarBoletinMensual(Map* map);
 // --------------------- UTILIDADES ---------------------
 void limpiarPantalla();
 void presioneTeclaParaContinuar();
+void buscarInsumosEnRangoDeFechas(Map* map, const char* fecha_inicio, const char* fecha_fin, int orden);
 
 // --------------------- PREDICCIÓN ---------------------
 float predecirGastoSemanalDesdeMapa(Map* map);
 
 // --------------------- COMPARADORES ---------------------
 int insumo_categoria_lower_than(void* a, void* b);
+int compare_insumos_by_fecha(void* a, void* b);
+int compare_insumos_by_producto(void* a, void* b);
+int compare_insumos_by_valor(void* a, void* b);
 
 // --------------------- LIBERACIÓN ---------------------
 void liberar_insumo(void* data);  // Para list_clean
